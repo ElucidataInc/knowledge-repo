@@ -54,9 +54,71 @@ class KnowledgeRepository(with_metaclass(SubclassRegisteringABCMeta, object)):
             uris = {'': uri}
         else:
             uris = uri
-
         krs = {name: cls.for_uri(uri) for name, uri in list(uris.items())}
         return MetaKnowledgeRepository(krs)
+
+    @classmethod
+    def for_uris_polly(cls, uri,engine,session):
+        # Import this within this method so as not to cause import resolution problems
+        from .repositories.meta import MetaKnowledgeRepository
+        if isinstance(uri, six.string_types):
+            uris = {'': uri}
+        else:
+            uris = uri
+        krs = {name: cls.for_uri(uri,engine=engine,session = session) for name, uri in list(uris.items())}
+        return MetaKnowledgeRepository(krs)
+
+    def upload_post(self,filepath,path):
+        new_post = KnowledgePost.from_file(filepath)
+        self.add(new_post,path=path,update=True)
+        self.submit(path)
+        self.accept(path)
+        self.publish(path)
+        return new_post
+
+    @classmethod
+    def migrate_to_dbrepo(cls,gitpath,newpath):
+        # A new (supposedly) git repository is going to be uploaded
+        # That must be migrated to the database. 
+        # Inputs : 
+        # gitpath
+        # newpath
+
+        from .repositories.dbrepository import DbKnowledgeRepository
+        #newpath = "mysql://abhi:1234@localhost/knowledgerepo:%s"%newpath
+        db_obj = DbKnowledgeRepository(newpath)
+        gitkr = cls.for_uri(gitpath)
+        
+        for post in gitkr.posts():
+            '''
+            post_path  = gitpath + '/' + post.path
+            if len(post.src_paths)>0:
+                post_src_path = post_path + '/' + post.src_paths[0]
+                new_post = KnowledgePost.from_file(post_src_path)
+            else:
+                new_post = post
+            '''
+            new_post = db_obj.add(post,path=post.path,update=True)
+            db_obj.submit(new_post.path)
+            db_obj.accept(new_post.path)
+            db_obj.publish(new_post.path)
+        return db_obj
+    
+    @classmethod
+    def append_obj(cls,name,new_obj,meta_repo):
+        from .repositories.meta import MetaKnowledgeRepository
+        krs = meta_repo.uri
+        krs[name] = new_obj
+        meta_repo = MetaKnowledgeRepository(krs)
+        return meta_repo
+
+    @classmethod
+    def append_for_uri(cls,name,uri,meta_repo):
+        from .repositories.meta import MetaKnowledgeRepository
+        krs = meta_repo.uri
+        krs[name] = cls.for_uri(uri)
+        meta_repo = MetaKnowledgeRepository(krs)
+        return meta_repo
 
     @classmethod
     def from_uri(cls, url, *args, **kwargs):

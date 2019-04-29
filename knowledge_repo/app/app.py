@@ -9,7 +9,7 @@ import uuid
 import mimetypes
 
 import six
-from flask import Flask, current_app, render_template, request, session
+from flask import Flask, current_app, render_template, request, session, Blueprint, g
 from flask_login import LoginManager, user_loaded_from_request
 from flask_mail import Mail
 from flask_migrate import Migrate
@@ -19,6 +19,7 @@ from alembic.migration import MigrationContext
 from datetime import datetime
 from werkzeug import url_encode
 
+import requests
 import knowledge_repo
 from . import routes
 from .auth_provider import KnowledgeAuthProvider
@@ -26,8 +27,9 @@ from .proxies import db_session, current_repo, current_user
 from .index import update_index, set_up_indexing_timers, time_since_index, time_since_index_check
 from .models import db as sqlalchemy_db, User, Tag
 from .utils.auth import AnonymousKnowledgeUser, populate_identity_roles, prepare_user
-
 # Needed to serve svg with correct mime type over https
+from sqlalchemy.orm import  scoped_session
+
 mimetypes.add_type('image/svg+xml', '.svg')
 
 logging.basicConfig(level=logging.INFO)
@@ -39,8 +41,8 @@ class KnowledgeFlask(Flask):
     def __init__(self, repo, db_uri=None, debug=None, config=None, **kwargs):
         Flask.__init__(self, __name__,
                        template_folder='templates',
-                       static_folder='static')
-
+                       static_folder='static') # Set to none so that the static path is supplied by host and not this flask app
+        print("KNowledgeFlask was initialised though")
         # Add unique identifier for this application isinstance
         self.uuid = str(uuid.uuid4())
         if 'KNOWLEDGE_REPO_MASTER_UUID' not in os.environ:
@@ -59,6 +61,16 @@ class KnowledgeFlask(Flask):
         # Add configuration passed in as keyword arguments
         self.config.update(kwargs)
 
+        # Configure static paths based on routes
+        
+        self.static_folder = 'static'
+        if self.config['APPLICATION_ROOT'] is None:
+            self.static_url_path = '/static/'
+            self.static_folder = 'static'
+        else:
+            self.static_url_path = self.config['APPLICATION_ROOT'] + '/static/'
+            self.static_folder = self.config['APPLICATION_ROOT'] + '/static'
+        
         # Prepare repository, and add it to the app
         if hasattr(config, 'prepare_repo'):
             repo = config.prepare_repo(repo)
@@ -108,12 +120,12 @@ class KnowledgeFlask(Flask):
         @self.login_manager.user_loader
         def load_user(user_id):
             return User(identifier=user_id)
-
         # Attempt login via http headers
+        
         if self.config.get('AUTH_USE_REQUEST_HEADERS'):
             @self.login_manager.request_loader
             def load_user_from_request(request):
-                user_attributes = current_app.config.get('AUTH_MAP_REQUEST_HEADERS')(request.headers)
+                user_attributes = current_app.config.get('AUTH_MAP_REQUEST_HEADERS')(request.cookies)
                 if isinstance(user_attributes, dict) and user_attributes.get('identifier', None):
                     user = User(identifier=user_attributes['identifier'])
                     user.can_logout = False
@@ -161,21 +173,24 @@ class KnowledgeFlask(Flask):
         if self.config.get('MAIL_SERVER'):
             self.config['mail'] = Mail(self)
 
-        # Register routes to be served
-        self.register_blueprint(routes.posts.blueprint)
-        self.register_blueprint(routes.health.blueprint)
-        self.register_blueprint(routes.index.blueprint)
-        self.register_blueprint(routes.tags.blueprint)
-        self.register_blueprint(routes.vote.blueprint)
-        self.register_blueprint(routes.comment.blueprint)
-        self.register_blueprint(routes.stats.blueprint)
-        self.register_blueprint(routes.editor.blueprint)
-        self.register_blueprint(routes.groups.blueprint)
-        self.register_blueprint(routes.auth.blueprint)
+                # Register routes to be served 
+        # For Polly, prefix the routes with Application Root config param
+        self.register_blueprint(routes.posts.blueprint, url_prefix = self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.health.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.index.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.tags.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.vote.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.comment.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.stats.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.editor.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.groups.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.auth.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(routes.polly_api.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
+        self.register_blueprint(Blueprint('admin',__name__,static_folder = 'static',static_url_path=self.config['APPLICATION_ROOT']+'/static'))
         KnowledgeAuthProvider.register_auth_provider_blueprints(self)
 
         if self.config['DEBUG']:
-            self.register_blueprint(routes.debug.blueprint)
+            self.register_blueprint(routes.debug.blueprint,url_prefix=self.config['APPLICATION_ROOT'])
 
         # Register error handler
         @self.errorhandler(500)
@@ -203,12 +218,16 @@ class KnowledgeFlask(Flask):
         @self.before_request
         def open_repository_session():
             if not request.path.startswith('/static'):
+                from . import db_repo_session
+                g.Session = scoped_session(db_repo_session)
+                g.db_repo_session = g.Session()
                 current_repo.session_begin()
 
         @self.after_request
         def close_repository_session(response):
             if not request.path.startswith('/static'):
                 current_repo.session_end()
+                g.Session.remove()
             return response
 
         @self.context_processor
@@ -273,6 +292,43 @@ class KnowledgeFlask(Flask):
             except:
                 return date
 
+    
+    def append_repo(self,name,uri):
+        temp = self.repository
+        self.repository = knowledge_repo.KnowledgeRepository.append_for_uri(name,uri,temp)
+        #self.db_update_index(check_timeouts=False, force=True )
+        return self.repository
+    
+    def get_kr_list(self): 
+        host=request.host
+        resp = requests.get("https://%s/api/project"%(host),cookies=request.cookies)
+        krs_total = []
+        for item in resp.json():
+            pid = item['id']
+            kr_proj = requests.get("https://%s/api/project?id=%s"%(host,pid),cookies=request.cookies)
+            krs_total = krs_total + [(pid,kr) for kr in kr_proj.json()['Knowledge_repo']]
+
+        return krs_total
+
+    def is_kr_shared(self,kr): 
+        host=request.host
+        pid, repo = kr.split('/')
+        
+        resp = requests.get("https://%s/api/project?id=%s"%(host,pid),cookies=request.cookies)
+        resp_obj = resp.json()
+        if 'messages' in resp_obj.keys():
+            return False
+        else:
+            return True
+
+
+   
+    def append_repo_obj(self,name,obj):
+        temp = self.repository
+        self.repository = knowledge_repo.KnowledgeRepository.append_obj(name,obj,temp)
+        #self.db_update_index(check_timeouts=False, force=True)
+        return True
+        
     @property
     def repository(self):
         return getattr(self, '_repository')

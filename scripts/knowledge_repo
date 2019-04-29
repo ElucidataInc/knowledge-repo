@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 from __future__ import print_function
 from __future__ import unicode_literals
 
@@ -41,6 +41,13 @@ if os.path.exists(os.path.join(contrib_dir, '__init__.py')):
 # constructing the argument parser, and checking the provided repo. We do this before
 # we finish constructing the entire parser so that the syntax and arguments can change
 # from version to version of this script.
+
+# Repeating what the argparse already does
+def parse_repo_string(repo_str):
+    prefix_pattern = re.compile('^(?:\{(?P<name>[a-zA-Z_0-9]*)\})?(?P<uri>.*)$')
+
+    prefix = prefix_pattern.match(repo_str)
+    return prefix.groups()
 
 class ParseRepositories(argparse.Action):
 
@@ -177,6 +184,10 @@ submit = subparsers.add_parser('submit', help='Submit a knowledge post for revie
 submit.set_defaults(action='submit')
 submit.add_argument('path', help='The path of the knowledge post to submit for review.')
 
+submit = subparsers.add_parser('accept', help='accept a knowledge post')
+submit.set_defaults(action='accept')
+submit.add_argument('path', help='The path of the knowledge post to accept')
+
 push = subparsers.add_parser('push', help='DEPRECATED: Use `submit` instead.')
 push.set_defaults(action='push')
 push.add_argument('path', help='The path of the knowledge post to submit for review.')
@@ -296,6 +307,9 @@ if args.action in ['submit', 'push'] or (args.action == 'add' and args.submit):
     repo.submit(path=args.path)
     sys.exit(0)
 
+if args.action == 'accept' :
+    repo.accept(args.path)
+    repo.publish(args.path)
 # Everything below this point has to do with running and/or managing the web app
 from knowledge_repo.app.deploy import KnowledgeDeployer, get_app_builder
 

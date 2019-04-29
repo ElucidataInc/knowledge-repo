@@ -10,9 +10,9 @@ import os
 import json
 from builtins import str
 from collections import namedtuple
-from flask import request, render_template, redirect, Blueprint, current_app, make_response
+from flask import request, render_template, redirect, Blueprint, current_app, make_response, url_for
 from flask_login import login_required
-from sqlalchemy import case, desc
+from sqlalchemy import case, desc, func
 
 from .. import permissions
 from ..proxies import db_session, current_repo
@@ -48,8 +48,7 @@ def site_map():
 @blueprint.route('/')
 @PageView.logged
 def render_index():
-    return redirect('/feed')
-
+    return redirect(url_for('index.render_feed'))
 
 @blueprint.route('/favorites')
 @PageView.logged
@@ -82,11 +81,38 @@ def render_favorites():
 @permissions.index_view.require()
 def render_feed():
     """ Renders the index-feed view """
+    global current_repo,current_app
+    
+    # Given a KR argument, show the contents of that KR
+    # If no such argument, redirect to "My Posts"
+
     feed_params = from_request_get_feed_params(request)
-    posts, post_stats = get_posts(feed_params)
+    user_id = feed_params['user_id']
+    user = (db_session.query(User)
+            .filter(User.id == user_id)
+            .first())
+    if ('kr' not in request.args.keys()):
+        if ('authors' not in request.args.keys()):
+            return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+        else:
+            posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
+    else:
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://%s/?next=%s"%(request.host,request.full_path))
+            
+        posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
+                .filter(func.lower(Post.path).like(folder + '/%')))
+        post_stats = {post.path: {'all_views': post.view_count,
+                              'distinct_views': post.view_user_count,
+                              'total_likes': post.vote_count,
+                              'total_comments': post.comment_count} for post in posts}
+
     for post in posts:
         post.tldr = render_post_tldr(post)
-
     return render_template("index-feed.html",
                            feed_params=feed_params,
                            posts=posts,
@@ -99,14 +125,15 @@ def render_feed():
 @permissions.index_view.require()
 def render_table():
     """Renders the index-table view"""
-    feed_params = from_request_get_feed_params(request)
-    posts, post_stats = get_posts(feed_params)
+    #feed_params = from_request_get_feed_params(request)
+    #posts, post_stats = get_posts(feed_params)
     # TODO reference stats inside the template
-    return render_template("index-table.html",
-                           posts=posts,
-                           post_stats=post_stats,
-                           top_header="Knowledge Table",
-                           feed_params=feed_params)
+    return render_template("permission_denied.html")
+    #return render_template("index-table.html",
+    #                       posts=posts,
+    #                       post_stats=post_stats,
+    #                       top_header="Knowledge Table",
+    #                       feed_params=feed_params)
 
 
 @blueprint.route('/cluster')
@@ -116,6 +143,8 @@ def render_cluster():
     """ Render the cluster view """
     # we don't use the from_request_get_feed_params because some of the
     # defaults are different
+    
+    return render_template("permission_denied.html")
     filters = request.args.get('filters', '')
     sort_by = request.args.get('sort_by', 'alpha')
     group_by = request.args.get('group_by', 'folder')

@@ -24,7 +24,6 @@ def render(path):
     """
     Render the knowledge post with all the related formatting.
     """
-
     mode = request.args.get('render', 'html')
     username, user_id = current_user.identifier, current_user.id
 
@@ -40,8 +39,8 @@ def render(path):
         # html = create_presentation_text(presentation_post)
         tmpl = "markdown-presentation.html"
 
-    if not current_app.config.get('INDEXING_ENABLED', True):
-        return _render_preview(path=path, tmpl=tmpl)
+#    if not current_app.config.get('INDEXING_ENABLED', True):
+#        return _render_preview(path=path, tmpl=tmpl)
 
     post = (db_session.query(Post)
                       .filter(Post.path == path)
@@ -89,7 +88,11 @@ def render(path):
     is_webpost = False
     if web_editor_prefixes:
         is_webpost = any(prefix for prefix in web_editor_prefixes if path.startswith(prefix))
+    
+    postpath = path.split('/')
 
+    krpath = url_for('index.render_feed',kr='/'.join(postpath[:2]))
+    krname = postpath[1]
     rendered = render_template(tmpl,
                                html=rendered['html'],
                                toc=rendered['toc'],
@@ -113,7 +116,11 @@ def render(path):
                                is_private=(post.private == 1),
                                is_author=is_author,
                                can_download=permissions.post_download.can(),
-                               downloads=post.kp.src_paths)
+                               downloads=post.kp.src_paths,
+                               post_page=True,
+                               krlink=krpath,
+                               krname=krname)
+
     return rendered
 
 
