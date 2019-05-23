@@ -197,7 +197,22 @@ def render_cluster():
     # we don't use the from_request_get_feed_params because some of the
     # defaults are different
     
-    return render_template("permission_denied.html")
+    #return render_template("permission_denied.html")
+    folder = None
+    if ('kr' not in request.args.keys()):
+        if ('authors' not in request.args.keys()):
+            return redirect(url_for("index.render_cluster")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+        else:
+#            posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
+            folder = None
+    else:
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+
     filters = request.args.get('filters', '')
     sort_by = request.args.get('sort_by', 'alpha')
     group_by = request.args.get('group_by', 'folder')
@@ -205,10 +220,18 @@ def render_cluster():
     sort_desc = not bool(request.args.get('sort_asc', ''))
 
     excluded_tags = current_app.config.get('EXCLUDED_TAGS', [])
-    post_query = (db_session.query(Post)
-                            .filter(Post.is_published)
-                            .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
 
+    if folder:
+        post_query = (db_session.query(Post)
+                            .filter(Post.is_published)
+                            .filter(func.lower(Post.path).like(folder+'/%')
+                            .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
+    else:
+        post_query = (db_session.query(Post)
+                            .filter(Post.is_published)
+                            .filter(Post.
+                            .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
+         
     if filters:
         filter_set = filters.split(" ")
         for elem in filter_set:
