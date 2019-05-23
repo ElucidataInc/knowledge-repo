@@ -142,16 +142,50 @@ def render_feed():
 @permissions.index_view.require()
 def render_table():
     """Renders the index-table view"""
-    #feed_params = from_request_get_feed_params(request)
+    feed_params = from_request_get_feed_params(request)
     #posts, post_stats = get_posts(feed_params)
-    # TODO reference stats inside the template
-    return render_template("permission_denied.html")
-    #return render_template("index-table.html",
-    #                       posts=posts,
-    #                       post_stats=post_stats,
-    #                       top_header="Knowledge Table",
-    #                       feed_params=feed_params)
+    user_id = feed_params['user_id']
+    user = (db_session.query(User)
+            .filter(User.id == user_id)
+            .first())
+    if ('kr' not in request.args.keys()):
+        if ('authors' not in request.args.keys()):
+            return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+        else:
+            posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
+    else:
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+            
+        posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
+                .filter(func.lower(Post.path).like(folder + '/%')))
+        post_stats = {post.path: {'all_views': post.view_count,
+                              'distinct_views': post.view_user_count,
+                              'total_likes': post.vote_count,
+                              'total_comments': post.comment_count} for post in posts}
 
+    for post in posts:
+        post.tldr = render_post_tldr(post)
+    return render_template("index-table.html",
+                           feed_params=feed_params,
+                           posts=posts,
+                           post_stats=post_stats,
+                           top_header=feed_params)
+
+
+    # TODO reference stats inside the template
+    #return render_template("permission_denied.html")
+    '''
+    return render_template("index-table.html",
+                           posts=posts,
+                           post_stats=post_stats,
+                           top_header="Knowledge Table",
+                           feed_params=feed_params)
+    '''
 
 @blueprint.route('/cluster')
 @PageView.logged
