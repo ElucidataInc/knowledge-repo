@@ -144,13 +144,14 @@ def render_table():
     """Renders the index-table view"""
     feed_params = from_request_get_feed_params(request)
     #posts, post_stats = get_posts(feed_params)
+    folder = None
     user_id = feed_params['user_id']
     user = (db_session.query(User)
             .filter(User.id == user_id)
             .first())
     if ('kr' not in request.args.keys()):
         if ('authors' not in request.args.keys()):
-            return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+            return redirect(url_for("index.render_table")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
         else:
             posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
     else:
@@ -173,6 +174,7 @@ def render_table():
     return render_template("index-table.html",
                            feed_params=feed_params,
                            posts=posts,
+                           kr = folder,
                            post_stats=post_stats,
                            top_header=feed_params)
 
