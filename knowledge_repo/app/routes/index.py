@@ -197,15 +197,14 @@ def render_cluster():
     # we don't use the from_request_get_feed_params because some of the
     # defaults are different
     
+    feed_params = from_request_get_feed_params(request)
+    user_id = feed_params['user_id']
+    user = (db_session.query(User)
+            .filter(User.id == user_id)
+            .first())
     #return render_template("permission_denied.html")
     folder = None
-    if ('kr' not in request.args.keys()):
-        if ('authors' not in request.args.keys()):
-            return redirect(url_for("index.render_cluster")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
-        else:
-#            posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
-            folder = None
-    else:
+    if 'kr' in request.args.keys():
         folder = request.args.get('kr')
         try:
             if not current_app.is_kr_shared(folder):
@@ -213,6 +212,7 @@ def render_cluster():
         except ValueError:
             return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
 
+    
     filters = request.args.get('filters', '')
     sort_by = request.args.get('sort_by', 'alpha')
     group_by = request.args.get('group_by', 'folder')
@@ -224,14 +224,19 @@ def render_cluster():
     if folder:
         post_query = (db_session.query(Post)
                             .filter(Post.is_published)
-                            .filter(func.lower(Post.path).like(folder+'/%')
+                            .filter(func.lower(Post.path).like(folder+'/%'))
                             .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
     else:
+        if 'authors' in request.args.keys():
+            author_names = request.args.get('authors')
+            author_names = [author_name.strip() for author_name in author_names.split(',')]
+        else:
+            author_names = [user.email] 
+       
         post_query = (db_session.query(Post)
                             .filter(Post.is_published)
-                            .filter(Post.
+                            .filter(Post.authors.any(User.identifier.in_(author_names)))
                             .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
-         
     if filters:
         filter_set = filters.split(" ")
         for elem in filter_set:
@@ -246,6 +251,10 @@ def render_cluster():
     if group_by == "author":
         author_to_posts = {}
         authors = (db_session.query(User).all())
+
+        allowed_posts = post_query.all()
+#        for post in allowed_posts:
+ #           authors += post.authors
         for author in authors:
             author_posts = [
                 ClusterPost(name=post.title, is_post=True,
@@ -263,16 +272,22 @@ def render_cluster():
 
     elif group_by == "tags":
         tags_to_posts = {}
+        '''
         all_tags = (db_session.query(Tag)
                               .filter(~Tag.name.in_(excluded_tags))
                               .all())
+        '''
+        all_tags = []
+        allowed_posts = post_query.all()
+        for post in allowed_posts:
+            all_tags += post.tags
 
         for tag in all_tags:
             tag_posts = [
                 ClusterPost(name=post.title, is_post=True,
                             children_count=0, content=post)
                 for post in tag.posts
-                if post.is_published and not post.contains_excluded_tag
+                if post.is_published and not post.contains_excluded_tag and post in allowed_posts
             ]
             if tag_posts:
                 tags_to_posts[tag.name] = tag_posts
