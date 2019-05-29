@@ -253,17 +253,26 @@ def render_cluster():
         authors = (db_session.query(User).all())
 
         allowed_posts = post_query.all()
-#        for post in allowed_posts:
- #           authors += post.authors
+        for post in allowed_posts:
+            authors += post.authors
         for author in authors:
             author_posts = [
                 ClusterPost(name=post.title, is_post=True,
                             children_count=0, content=post)
                 for post in author.posts
-                if post.is_published and not post.contains_excluded_tag
+                if post.is_published and not post.contains_excluded_tag and post in allowed_posts
             ]
             if author_posts:
-                author_to_posts[author.format_name] = author_posts
+                display_name = author.format_name
+                if '@' in display_name:
+                    username,domain = display_name.split('@')
+                    if '.' in username:
+                        fname,lname=username.split('.')
+                        display_name = "%s %s"%(fname,lname)
+                    else:
+                        display_name = "%s"%username
+                    
+                author_to_posts[display_name] = author_posts
         grouped_data = [
             ClusterPost(name=k, is_post=False,
                         children_count=len(v), content=v)
