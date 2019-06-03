@@ -211,7 +211,16 @@ def render_cluster():
                 return render_template("permission_denied.html")
         except ValueError:
             return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+    
+    try:
+        kr_list = current_app.get_kr_list()
+    except ValueError:
+        return redirect("https://%s/?next=%s"%(request.host,request.full_path))
 
+    reference ={}
+    for pid,pname,krname in kr_list:
+        reference[pid] = pname
+        print(pid,pname,krname)
     
     filters = request.args.get('filters', '')
     sort_by = request.args.get('sort_by', 'alpha')
@@ -310,10 +319,13 @@ def render_cluster():
         posts = post_query.all()
 
         # group by folder
+        for i,j reference.items():
+            print(i,j)
         folder_to_posts = {}
-
         for post in posts:
             folder_hierarchy = post.path.split('/')
+            
+            folder_hierarchy[0] = reference[folder_hierarchy[0]]    
             cursor = folder_to_posts
 
             for folder in folder_hierarchy[:-1]:

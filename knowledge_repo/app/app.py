@@ -43,7 +43,6 @@ class KnowledgeFlask(Flask):
         Flask.__init__(self, __name__,
                        template_folder='templates',
                        static_folder='static') # Set to none so that the static path is supplied by host and not this flask app
-        print("KNowledgeFlask was initialised though")
         # Add unique identifier for this application isinstance
         self.uuid = str(uuid.uuid4())
         if 'KNOWLEDGE_REPO_MASTER_UUID' not in os.environ:
@@ -292,7 +291,7 @@ class KnowledgeFlask(Flask):
                 return datetime.strftime(date, '%Y-%m-%d')
             except:
                 return date
-
+        
     
     def append_repo(self,name,uri):
         temp = self.repository
@@ -319,7 +318,6 @@ class KnowledgeFlask(Flask):
         
         header = {'public-token' : request.cookies.get('public-token')}
         resp = requests.get("%s/project?id=%s"%(host,pid),headers=header)
-
         try:
             resp_obj = resp.json()
         except json.decoder.JSONDecodeError:
