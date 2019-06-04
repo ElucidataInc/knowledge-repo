@@ -64,6 +64,10 @@ def render_favorites():
             .first())
     posts = user.liked_posts
 
+    prev_filters = dict(request.args)
+    if 'filters' in prev_filters:
+      del prev_filters['filters']
+
     post_stats = {post.path: {'all_views': post.view_count,
                               'distinct_views': post.view_user_count,
                               'total_likes': post.vote_count,
@@ -73,7 +77,8 @@ def render_favorites():
                            feed_params=feed_params,
                            posts=posts,
                            post_stats=post_stats,
-                           top_header='Favorites')
+                           top_header='Favorites',
+                           prev_filters = prev_filters)
 
 
 @blueprint.route('/feed')
@@ -91,33 +96,58 @@ def render_feed():
     user = (db_session.query(User)
             .filter(User.id == user_id)
             .first())
-    if ('kr' not in request.args.keys()):
+
+    prev_filters = dict(request.args)
+
+    if 'filters' in prev_filters:
+      del prev_filters['filters']
+
+    if 'filters' in request.args.keys() and feed_params['filters'] == '': # edge case when enter is pressed in search bar without any query, showing no result
+        return render_template("index-feed.html",
+                                feed_params = feed_params,
+                                posts = [],
+                                post_stats = {},
+                                top_header = 'Knowledge Feed',
+                                prev_filters = prev_filters)
+
+    if ('kr' not in request.args.keys() and 'filters' not in request.args.keys()):
         if ('authors' not in request.args.keys()):
             return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
         else:
             posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
     else:
-        folder = request.args.get('kr')
-        try:
-            if not current_app.is_kr_shared(folder):
-                return render_template("permission_denied.html")
-        except ValueError:
-            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+        kr_posts = []
+        if 'kr' in request.args.keys():
+            folder = request.args.get('kr')
+            try:
+                if not current_app.is_kr_shared(folder):
+                    return render_template("permission_denied.html")
+            except ValueError:
+                return redirect("http://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
             
-        posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
+            kr_posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
                 .filter(func.lower(Post.path).like(folder + '/%')))
+
+        filtered_posts, _ = get_posts(feed_params)
+
+        if len(kr_posts) != 0:
+            posts = list(set(kr_posts) & set(filtered_posts))
+        else:
+            posts = filtered_posts
+
         post_stats = {post.path: {'all_views': post.view_count,
                               'distinct_views': post.view_user_count,
                               'total_likes': post.vote_count,
                               'total_comments': post.comment_count} for post in posts}
-
     for post in posts:
         post.tldr = render_post_tldr(post)
+
     return render_template("index-feed.html",
                            feed_params=feed_params,
                            posts=posts,
                            post_stats=post_stats,
-                           top_header='Knowledge Feed')
+                           top_header='Knowledge Feed',
+                           prev_filters = prev_filters)
 
 
 @blueprint.route('/table')
