@@ -112,6 +112,15 @@ def get_posts(feed_params):
     posts = posts[feed_params['start']:feed_params[
         'start'] + feed_params['results']]
 
+    filtered_posts = []
+
+    for post in posts:
+        split_post = post.path.split('/')
+        kr = split_post[0] + '/' + split_post[1]
+        if current_app.is_kr_shared(kr):
+            filtered_posts.append(post)
+
+    posts = filtered_posts
     # Post.authors is lazy loaded, so we need to make sure it has been loaded before being
     # passed beyond the scope of this database db_session.
     for post in posts:
