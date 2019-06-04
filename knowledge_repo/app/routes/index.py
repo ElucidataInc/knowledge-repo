@@ -13,7 +13,7 @@ from builtins import str
 from collections import namedtuple
 from flask import request, render_template, redirect, Blueprint, current_app, make_response, url_for
 from flask_login import login_required
-from sqlalchemy import case, desc, func
+from sqlalchemy import case, desc, func, or_
 
 from .. import permissions
 from ..proxies import db_session, current_repo, current_user
@@ -204,6 +204,7 @@ def render_cluster():
             .first())
     #return render_template("permission_denied.html")
     folder = None
+    folder_flag = None
     if 'kr' in request.args.keys():
         folder = request.args.get('kr')
         try:
@@ -218,9 +219,10 @@ def render_cluster():
         return redirect("https://%s/?next=%s"%(request.host,request.full_path))
 
     reference ={}
+    folders = []
     for pid,pname,krname in kr_list:
-        reference[pid] = pname
-        print(pid,pname,krname)
+        reference[int(pid)] = pname
+        folders.append('{pid}/{name}/%'.format(pid = pid,name = krname))
     
     filters = request.args.get('filters', '')
     sort_by = request.args.get('sort_by', 'alpha')
@@ -229,23 +231,16 @@ def render_cluster():
     sort_desc = not bool(request.args.get('sort_asc', ''))
 
     excluded_tags = current_app.config.get('EXCLUDED_TAGS', [])
-
+    
+    folder_flag = folder
     if folder:
         post_query = (db_session.query(Post)
                             .filter(Post.is_published)
                             .filter(func.lower(Post.path).like(folder+'/%'))
                             .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
     else:
-        if 'authors' in request.args.keys():
-            author_names = request.args.get('authors')
-            author_names = [author_name.strip() for author_name in author_names.split(',')]
-        else:
-            author_names = [user.email] 
-       
-        post_query = (db_session.query(Post)
-                            .filter(Post.is_published)
-                            .filter(Post.authors.any(User.identifier.in_(author_names)))
-                            .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
+        post_query = (db_session.query(Post).filter(Post.is_published)
+                                            .filter(or_(*[Post.path.like(fol) for fol in folders])))
     if filters:
         filter_set = filters.split(" ")
         for elem in filter_set:
@@ -319,13 +314,10 @@ def render_cluster():
         posts = post_query.all()
 
         # group by folder
-        for i,j reference.items():
-            print(i,j)
         folder_to_posts = {}
         for post in posts:
             folder_hierarchy = post.path.split('/')
-            
-            folder_hierarchy[0] = reference[folder_hierarchy[0]]    
+            folder_hierarchy[0] = reference[int(folder_hierarchy[0])]    
             cursor = folder_to_posts
 
             for folder in folder_hierarchy[:-1]:
@@ -394,6 +386,7 @@ def render_cluster():
                            grouped_data=grouped_data,
                            filters=filters,
                            sort_by=sort_by,
+                           kr = folder_flag,
                            group_by=group_by,
                            tag=request_tag)
 
