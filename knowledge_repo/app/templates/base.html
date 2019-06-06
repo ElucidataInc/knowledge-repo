@@ -220,7 +220,7 @@
         UserPoolId: cognitodata.cognito_user_pool,
         ClientId: cognitodata.cognito_client_id,
         Storage: new AmazonCognitoIdentity.CookieStorage({
-          domain: window.location.hostname,
+          domain: window.location.hostname.slice(2),
           secure: false
         })
       };

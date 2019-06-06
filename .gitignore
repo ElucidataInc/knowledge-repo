@@ -110,3 +110,8 @@ ENV/
 
 # Mac OS X filesystem artifacts
 .DS_Store
+
+# Elastic Beanstalk Files
+.elasticbeanstalk/*
+!.elasticbeanstalk/*.cfg.yml
+!.elasticbeanstalk/*.global.yml
