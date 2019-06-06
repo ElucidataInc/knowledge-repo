@@ -8,6 +8,7 @@ This includes:
 """
 import os
 import json
+import logging
 from builtins import str
 from collections import namedtuple
 from flask import request, render_template, redirect, Blueprint, current_app, make_response, url_for
@@ -15,11 +16,14 @@ from flask_login import login_required
 from sqlalchemy import case, desc, func
 
 from .. import permissions
-from ..proxies import db_session, current_repo
+from ..proxies import db_session, current_repo, current_user
 from ..utils.posts import get_posts
 from ..models import Post, Tag, User, PageView
 from ..utils.requests import from_request_get_feed_params
 from ..utils.render import render_post_tldr
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 blueprint = Blueprint(
     'index', __name__, template_folder='../templates', static_folder='../static')
@@ -336,27 +340,79 @@ def create(knowledge_format=None):
 
 @blueprint.route('/ajax/index/typeahead', methods=['GET', 'POST'])
 def ajax_post_typeahead():
+
     if not permissions.index_view.can():
         return '[]'
 
     # this a string of the search term
     search_terms = request.args.get('search', '')
-    search_terms = search_terms.split(" ")
-    case_statements = []
-    for term in search_terms:
-        case_stmt = case([(Post.keywords.ilike('%' + term.strip() + '%'), 1)], else_=0)
-        case_statements += [case_stmt]
+    # search_terms = search_terms.split(" ")
+    # case_statements = []
+    # for term in search_terms:
+    #     case_stmt = case([(Post.keywords.ilike('%' + term.strip() + '%'), 1)], else_=0)
+    #     case_statements += [case_stmt]
 
-    match_score = sum(case_statements).label("match_score")
+    # match_score = sum(case_statements).label("match_score")
 
-    posts = (db_session.query(Post, match_score)
-                       .filter(Post.status == current_repo.PostStatus.PUBLISHED.value)
-                       .order_by(desc(match_score))
-                       .limit(5)
-                       .all())
+    # posts = (db_session.query(Post, match_score)
+    #                    .filter(Post.status == current_repo.PostStatus.PUBLISHED.value)
+    #                    .order_by(desc(match_score))
+    #                    .limit(5)
+    #                    .all())
 
     matches = []
-    for (post, count) in posts:
+
+    prev_url = request.referrer
+    feed_params = {}
+    qidx = prev_url.find('?')
+    posts = []
+    if qidx != -1:
+      filter_prev_url = prev_url[qidx+1:]
+      filter_prev_url_arr = filter_prev_url.split('&')
+      for filter in filter_prev_url_arr:
+        query, val = filter.split('=')
+        feed_params[query] = val
+      
+      feed_params['filters'] = search_terms
+      if not 'authors' in feed_params:
+        feed_params['authors'] 
+      if not 'start' in feed_params:
+        feed_params['start'] = 0
+      if not 'results' in feed_params:
+        feed_params['results'] = 10
+      if not 'sort_by' in feed_params:
+        feed_params['sort_by'] = 'updated_at'
+      if not 'sort_desc' in feed_params:
+        feed_params['sort_by'] = True
+      username, user_id = current_user.identifier, current_user.id
+      feed_params["username"] = username
+      feed_params["user_id"] = user_id
+
+      user_obj = (db_session.query(User)
+                            .filter(User.id == user_id)
+                            .first())
+
+      if user_obj:
+          feed_params["subscriptions"] = user_obj.subscriptions
+
+    posts, _ = get_posts(feed_params)
+
+    # for (post, count) in posts:
+    #   print(post)
+    #   print(count)
+    #   print('LIJILJ')
+
+    # filtered_posts = []
+    # for (post, count) in posts:
+    #   if post in current_posts:
+    #     filtered_posts.append(post)
+    # posts = filtered_posts
+
+
+    for post in posts:
+        # print(post)
+        # print(dir(post))
+        # if not current_app.is_kr_shared()
         authors_str = [author.format_name for author in post.authors]
         typeahead_entry = {'author': authors_str,
                            'title': str(post.title),
