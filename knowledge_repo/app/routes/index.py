@@ -19,7 +19,7 @@ from .. import permissions
 from ..proxies import db_session, current_repo, current_user
 from ..utils.posts import get_posts
 from ..models import Post, Tag, User, PageView
-from ..utils.requests import from_request_get_feed_params
+from ..utils.requests import from_url_get_feed_params
 from ..utils.render import render_post_tldr
 
 logging.basicConfig(level=logging.INFO)
@@ -60,7 +60,7 @@ def render_index():
 def render_favorites():
     """ Renders the index-feed view for posts that are liked """
 
-    feed_params = from_request_get_feed_params(request)
+    feed_params = from_url_get_feed_params(request.url)
     user_id = feed_params['user_id']
 
     user = (db_session.query(User)
@@ -95,7 +95,7 @@ def render_feed():
     # Given a KR argument, show the contents of that KR
     # If no such argument, redirect to "My Posts"
 
-    feed_params = from_request_get_feed_params(request)
+    feed_params = from_url_get_feed_params(request.url)
     user_id = feed_params['user_id']
     user = (db_session.query(User)
             .filter(User.id == user_id)
@@ -114,35 +114,19 @@ def render_feed():
                                 top_header = 'Knowledge Feed',
                                 prev_filters = prev_filters)
 
-    if ('kr' not in request.args.keys() and 'filters' not in request.args.keys()):
-        if ('authors' not in request.args.keys()):
-            return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
-        else:
-            posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
+    if 'kr' in request.args.keys():
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("http://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+
+    if ('kr' not in request.args.keys() and 'filters' not in request.args.keys() and 'authors' not in request.args.keys()):
+        return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
     else:
-        kr_posts = []
-        if 'kr' in request.args.keys():
-            folder = request.args.get('kr')
-            try:
-                if not current_app.is_kr_shared(folder):
-                    return render_template("permission_denied.html")
-            except ValueError:
-                return redirect("http://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
-            
-            kr_posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
-                .filter(func.lower(Post.path).like(folder + '/%')))
+        posts, post_stats = get_posts(feed_params)
 
-        filtered_posts, _ = get_posts(feed_params)
-
-        if len(kr_posts) != 0:
-            posts = list(set(kr_posts) & set(filtered_posts))
-        else:
-            posts = filtered_posts
-
-        post_stats = {post.path: {'all_views': post.view_count,
-                              'distinct_views': post.view_user_count,
-                              'total_likes': post.vote_count,
-                              'total_comments': post.comment_count} for post in posts}
     for post in posts:
         post.tldr = render_post_tldr(post)
 
@@ -363,56 +347,12 @@ def ajax_post_typeahead():
     matches = []
 
     prev_url = request.referrer
-    feed_params = {}
-    qidx = prev_url.find('?')
-    posts = []
-    if qidx != -1:
-      filter_prev_url = prev_url[qidx+1:]
-      filter_prev_url_arr = filter_prev_url.split('&')
-      for filter in filter_prev_url_arr:
-        query, val = filter.split('=')
-        feed_params[query] = val
-      
-      feed_params['filters'] = search_terms
-      if not 'authors' in feed_params:
-        feed_params['authors'] 
-      if not 'start' in feed_params:
-        feed_params['start'] = 0
-      if not 'results' in feed_params:
-        feed_params['results'] = 10
-      if not 'sort_by' in feed_params:
-        feed_params['sort_by'] = 'updated_at'
-      if not 'sort_desc' in feed_params:
-        feed_params['sort_by'] = True
-      username, user_id = current_user.identifier, current_user.id
-      feed_params["username"] = username
-      feed_params["user_id"] = user_id
-
-      user_obj = (db_session.query(User)
-                            .filter(User.id == user_id)
-                            .first())
-
-      if user_obj:
-          feed_params["subscriptions"] = user_obj.subscriptions
+    feed_params = from_url_get_feed_params(prev_url)
+    feed_params['filters'] = search_terms
 
     posts, _ = get_posts(feed_params)
 
-    # for (post, count) in posts:
-    #   print(post)
-    #   print(count)
-    #   print('LIJILJ')
-
-    # filtered_posts = []
-    # for (post, count) in posts:
-    #   if post in current_posts:
-    #     filtered_posts.append(post)
-    # posts = filtered_posts
-
-
     for post in posts:
-        # print(post)
-        # print(dir(post))
-        # if not current_app.is_kr_shared()
         authors_str = [author.format_name for author in post.authors]
         typeahead_entry = {'author': authors_str,
                            'title': str(post.title),
