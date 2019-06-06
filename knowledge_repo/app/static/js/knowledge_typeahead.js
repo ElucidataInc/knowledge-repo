@@ -66,8 +66,6 @@ knowledgeTypeahead = (function(){
           url = url + '&';
           url = url + query;
         }
-        console.log('knowledgeTypeahead.js')
-        console.log(url)
         window.location = url;
   }
     });

@@ -22,7 +22,7 @@ $(document).ready(function() {
             }
         },
         source: function(q, sync, async) {
-            $.ajax('/ajax/index/typeahead?search=' + q, {
+            $.ajax('/ccbd24f370707c33603102adc7b77123/ajax/index/typeahead?search=' + q, {
                 success: function(data, status) {
                     async(JSON.parse(data));
                 }
