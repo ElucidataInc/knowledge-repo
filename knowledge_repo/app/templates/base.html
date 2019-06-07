@@ -84,7 +84,6 @@
       <div class="container-fluid">
         <div class='col-lg-2'></div>
         <div class='col-lg-8'>
-
           <div class="navbar-header">
             <!-- Hamburger button to display collapsed menu -->
             <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
@@ -101,16 +100,21 @@
             </a>
           </div>
 
-          <!-- Navigation items -->
-          <div id="navbar" class="navbar-collapse collapse">
+            <!-- Navigation items -->
+            <div id="navbar" class="navbar-collapse collapse">
 
             <!-- Search bar -->
             <form class="navbar-form navbar-left searchbar" role="search" action="{{url_for('index.render_feed')}}">
               <div class="input-group">
-                <input type="text" class="form-control" placeholder="Search" name="filters" id="searchbar" value="{% if feed_params and feed_params['filters'] %}{{ feed_params['filters'] }}{% endif %}">
-                <div class="input-group-btn">
-                  <button class="btn btn-default" type="submit"><i class="glyphicon glyphicon-search"></i></button>
-                </div>
+                  <input type="text" class="form-control" placeholder="Search" name="filters" id="searchbar" value="{% if feed_params and feed_params['filters'] %}{{ feed_params['filters'] }}{% endif %}">
+
+                  {% if prev_filters %}{% for key, value in prev_filters.items() %}
+                  <input type="hidden" name="{{key}}" value="{{value}}">
+                  {% endfor %}{% endif %}
+
+                  <div class="input-group-btn">
+                    <button class="btn btn-default" type="submit"><i class="glyphicon glyphicon-search"></i></button>
+                  </div>
               </div>
             </form>
 
