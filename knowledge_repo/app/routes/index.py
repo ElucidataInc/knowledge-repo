@@ -120,7 +120,7 @@ def render_feed():
             if not current_app.is_kr_shared(folder):
                 return render_template("permission_denied.html")
         except ValueError:
-            return redirect("http://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
 
     if ('kr' not in request.args.keys() and 'filters' not in request.args.keys() and 'authors' not in request.args.keys()):
         return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
@@ -129,7 +129,6 @@ def render_feed():
 
     for post in posts:
         post.tldr = render_post_tldr(post)
-
     return render_template("index-feed.html",
                            feed_params=feed_params,
                            posts=posts,
@@ -330,20 +329,6 @@ def ajax_post_typeahead():
 
     # this a string of the search term
     search_terms = request.args.get('search', '')
-    # search_terms = search_terms.split(" ")
-    # case_statements = []
-    # for term in search_terms:
-    #     case_stmt = case([(Post.keywords.ilike('%' + term.strip() + '%'), 1)], else_=0)
-    #     case_statements += [case_stmt]
-
-    # match_score = sum(case_statements).label("match_score")
-
-    # posts = (db_session.query(Post, match_score)
-    #                    .filter(Post.status == current_repo.PostStatus.PUBLISHED.value)
-    #                    .order_by(desc(match_score))
-    #                    .limit(5)
-    #                    .all())
-
     matches = []
 
     prev_url = request.referrer
