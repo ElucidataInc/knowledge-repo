@@ -157,7 +157,6 @@ workflows:
               only:
                 - /.*_dev/
                 - develop
-                - ftr_cicd
       - hold_for_testpolly:
           type: approval
           requires:
