@@ -68,3 +68,7 @@ def download_from_s3(path):
             return -1
 
     return fname,temp_name
+
+def create_kr(kr_name, pid):
+    path = 'knowledge-repo/' + pid + '/' + kr_name + '/'
+    CLIENT.put_object(Bucket = BUCKET_NAME, Key = path)

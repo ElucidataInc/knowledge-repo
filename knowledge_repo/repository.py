@@ -103,6 +103,13 @@ class KnowledgeRepository(with_metaclass(SubclassRegisteringABCMeta, object)):
             db_obj.accept(new_post.path)
             db_obj.publish(new_post.path)
         return db_obj
+
+    @classmethod
+    def create_dbrepo(cls, dbpath):
+        from .repositories.dbrepository import DbKnowledgeRepository
+        db_obj = DbKnowledgeRepository(dbpath)
+        return db_obj
+      
     
     @classmethod
     def append_obj(cls,name,new_obj,meta_repo):

@@ -309,13 +309,11 @@ class KnowledgeFlask(Flask):
             proj_name = item['name']
             kr_proj = requests.get("{host}/project?id={pid}".format(host=host,pid=pid),headers = header)
             krs_total = krs_total + [(pid,proj_name,kr) for kr in kr_proj.json()['Knowledge_repo']]
-
         return krs_total
 
     def is_kr_shared(self,kr): 
         host=os.environ['POLLY_API_URL']
         pid, repo = kr.split('/')
-        
         header = {'public-token' : request.cookies.get('public-token')}
         resp = requests.get("%s/project?id=%s"%(host,pid),headers=header)
         try:
