@@ -71,4 +71,10 @@ def download_from_s3(path):
 
 def create_kr(kr_name, pid):
     path = 'knowledge-repo/' + pid + '/' + kr_name + '/'
-    CLIENT.put_object(Bucket = BUCKET_NAME, Key = path)
+    try:
+        S3.Object(BUCKET_NAME, path).load()
+        return -1
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            CLIENT.put_object(Bucket = BUCKET_NAME, Key = path)
+    return 0

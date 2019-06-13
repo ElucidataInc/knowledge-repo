@@ -148,6 +148,18 @@ def add_kr():
         Kr name
     """
 
+    # adding kr to s3 bucket
+    ret_val = create_kr(kr_name, pid)
+
+    if ret_val == -1:
+	    return jsonify({
+	                'statusCode': '409',
+	                'headers': {
+	                            'Content-Type': 'application/json',
+	                            'Access-Control-Allow-Origin': '*'
+	                            },
+	                   })
+
     # adding kr to server and database
     pid = request.args.get('pid')
     kr_name = request.args.get('kr')
@@ -156,9 +168,6 @@ def add_kr():
     db_path = current_app.config['KR_REPO_DB_PATH'] + ':' +  dir_name
     dbobj = current_repo.create_dbrepo(db_path)
     current_app.append_repo_obj(dir_name,dbobj)
-
-    # adding kr to s3 bucket
-    create_kr(kr_name, pid)
 
     return jsonify({
                 'statusCode': '200',
