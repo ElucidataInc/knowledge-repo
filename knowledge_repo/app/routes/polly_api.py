@@ -147,6 +147,9 @@ def add_kr():
         Project id
         Kr name
     """
+    pid = request.args.get('pid')
+    kr_name = request.args.get('kr')
+    dir_name = pid + '/' + kr_name
 
     # adding kr to s3 bucket
     ret_val = create_kr(kr_name, pid)
@@ -161,9 +164,6 @@ def add_kr():
 	                   })
 
     # adding kr to server and database
-    pid = request.args.get('pid')
-    kr_name = request.args.get('kr')
-    dir_name = pid + '/' + kr_name
 
     db_path = current_app.config['KR_REPO_DB_PATH'] + ':' +  dir_name
     dbobj = current_repo.create_dbrepo(db_path)
