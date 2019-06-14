@@ -79,7 +79,7 @@ def upload_post_page():
     try:
         kr_list = current_app.get_kr_list()
     except ValueError:
-        return redirect("http://%s/?next=%s"%(request.host,request.full_path))
+        return redirect("https://%s/?next=%s"%(request.host,request.full_path))
     return render_template('upload_page.html',krs = kr_list)
 
 @blueprint.route('/api/uploadpost',methods=['POST'])
