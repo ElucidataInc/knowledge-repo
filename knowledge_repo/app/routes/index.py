@@ -13,7 +13,7 @@ from builtins import str
 from collections import namedtuple
 from flask import request, render_template, redirect, Blueprint, current_app, make_response, url_for
 from flask_login import login_required
-from sqlalchemy import case, desc, func
+from sqlalchemy import case, desc, func, or_
 
 from .. import permissions
 from ..proxies import db_session, current_repo, current_user
@@ -142,16 +142,52 @@ def render_feed():
 @permissions.index_view.require()
 def render_table():
     """Renders the index-table view"""
-    #feed_params = from_request_get_feed_params(request)
+    feed_params = from_request_get_feed_params(request)
     #posts, post_stats = get_posts(feed_params)
-    # TODO reference stats inside the template
-    return render_template("permission_denied.html")
-    #return render_template("index-table.html",
-    #                       posts=posts,
-    #                       post_stats=post_stats,
-    #                       top_header="Knowledge Table",
-    #                       feed_params=feed_params)
+    folder = None
+    user_id = feed_params['user_id']
+    user = (db_session.query(User)
+            .filter(User.id == user_id)
+            .first())
+    if ('kr' not in request.args.keys()):
+        if ('authors' not in request.args.keys()):
+            return redirect(url_for("index.render_table")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+        else:
+            posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
+    else:
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+            
+        posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
+                .filter(func.lower(Post.path).like(folder + '/%')))
+        post_stats = {post.path: {'all_views': post.view_count,
+                              'distinct_views': post.view_user_count,
+                              'total_likes': post.vote_count,
+                              'total_comments': post.comment_count} for post in posts}
 
+    for post in posts:
+        post.tldr = render_post_tldr(post)
+    return render_template("index-table.html",
+                           feed_params=feed_params,
+                           posts=posts,
+                           kr = folder,
+                           post_stats=post_stats,
+                           top_header=feed_params)
+
+
+    # TODO reference stats inside the template
+    #return render_template("permission_denied.html")
+    '''
+    return render_template("index-table.html",
+                           posts=posts,
+                           post_stats=post_stats,
+                           top_header="Knowledge Table",
+                           feed_params=feed_params)
+    '''
 
 @blueprint.route('/cluster')
 @PageView.logged
@@ -161,7 +197,33 @@ def render_cluster():
     # we don't use the from_request_get_feed_params because some of the
     # defaults are different
     
-    return render_template("permission_denied.html")
+    feed_params = from_request_get_feed_params(request)
+    user_id = feed_params['user_id']
+    user = (db_session.query(User)
+            .filter(User.id == user_id)
+            .first())
+    #return render_template("permission_denied.html")
+    folder = None
+    folder_flag = None
+    if 'kr' in request.args.keys():
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+    
+    try:
+        kr_list = current_app.get_kr_list()
+    except ValueError:
+        return redirect("https://%s/?next=%s"%(request.host,request.full_path))
+
+    reference ={}
+    folders = []
+    for pid,pname,krname in kr_list:
+        reference[int(pid)] = pname
+        folders.append('{pid}/{name}/%'.format(pid = pid,name = krname))
+    
     filters = request.args.get('filters', '')
     sort_by = request.args.get('sort_by', 'alpha')
     group_by = request.args.get('group_by', 'folder')
@@ -169,10 +231,16 @@ def render_cluster():
     sort_desc = not bool(request.args.get('sort_asc', ''))
 
     excluded_tags = current_app.config.get('EXCLUDED_TAGS', [])
-    post_query = (db_session.query(Post)
+    
+    folder_flag = folder
+    if folder:
+        post_query = (db_session.query(Post)
                             .filter(Post.is_published)
+                            .filter(func.lower(Post.path).like(folder+'/%'))
                             .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
-
+    else:
+        post_query = (db_session.query(Post).filter(Post.is_published)
+                                            .filter(or_(*[Post.path.like(fol) for fol in folders])))
     if filters:
         filter_set = filters.split(" ")
         for elem in filter_set:
@@ -187,15 +255,28 @@ def render_cluster():
     if group_by == "author":
         author_to_posts = {}
         authors = (db_session.query(User).all())
+
+        allowed_posts = post_query.all()
+        for post in allowed_posts:
+            authors += post.authors
         for author in authors:
             author_posts = [
                 ClusterPost(name=post.title, is_post=True,
                             children_count=0, content=post)
                 for post in author.posts
-                if post.is_published and not post.contains_excluded_tag
+                if post.is_published and not post.contains_excluded_tag and post in allowed_posts
             ]
             if author_posts:
-                author_to_posts[author.format_name] = author_posts
+                display_name = author.format_name
+                if '@' in display_name:
+                    username,domain = display_name.split('@')
+                    if '.' in username:
+                        fname,lname=username.split('.')
+                        display_name = "%s %s"%(fname,lname)
+                    else:
+                        display_name = "%s"%username
+                    
+                author_to_posts[display_name] = author_posts
         grouped_data = [
             ClusterPost(name=k, is_post=False,
                         children_count=len(v), content=v)
@@ -204,16 +285,22 @@ def render_cluster():
 
     elif group_by == "tags":
         tags_to_posts = {}
+        '''
         all_tags = (db_session.query(Tag)
                               .filter(~Tag.name.in_(excluded_tags))
                               .all())
+        '''
+        all_tags = []
+        allowed_posts = post_query.all()
+        for post in allowed_posts:
+            all_tags += post.tags
 
         for tag in all_tags:
             tag_posts = [
                 ClusterPost(name=post.title, is_post=True,
                             children_count=0, content=post)
                 for post in tag.posts
-                if post.is_published and not post.contains_excluded_tag
+                if post.is_published and not post.contains_excluded_tag and post in allowed_posts
             ]
             if tag_posts:
                 tags_to_posts[tag.name] = tag_posts
@@ -228,9 +315,9 @@ def render_cluster():
 
         # group by folder
         folder_to_posts = {}
-
         for post in posts:
             folder_hierarchy = post.path.split('/')
+            folder_hierarchy[0] = reference[int(folder_hierarchy[0])]    
             cursor = folder_to_posts
 
             for folder in folder_hierarchy[:-1]:
@@ -299,6 +386,7 @@ def render_cluster():
                            grouped_data=grouped_data,
                            filters=filters,
                            sort_by=sort_by,
+                           kr = folder_flag,
                            group_by=group_by,
                            tag=request_tag)
 
