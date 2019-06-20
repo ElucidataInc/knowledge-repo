@@ -20,9 +20,9 @@ from .. import permissions
 from ..proxies import db_session, current_repo
 from ..utils.posts import get_posts
 from ..models import Post, Tag, User, PageView
-from ..utils.requests import from_request_get_feed_params
+from ..utils.requests import from_url_get_feed_params
 from ..utils.render import render_post_tldr
-from ..utils.s3_talk import download_dir,download_from_s3  
+from ..utils.s3_talk import download_dir,download_from_s3, create_kr
 from ..index import update_index, update_index_for_post
 blueprint = Blueprint('api', __name__, template_folder='../templates', static_folder='../static')
 
@@ -137,4 +137,45 @@ def upload_kr():
                             'Access-Control-Allow-Origin': '*'
                             },
                    })
+
+@blueprint.route('/api/addkr')
+@PageView.logged
+def add_kr():
+    """
+    API to add a KR both to the server, database and s3 bucket
+    args:
+        Project id
+        Kr name
+    """
+    pid = request.args.get('pid')
+    kr_name = request.args.get('kr')
+    dir_name = pid + '/' + kr_name
+
+    # adding kr to s3 bucket
+    ret_val = create_kr(kr_name, pid)
+
+    if ret_val == -1:
+	    return jsonify({
+	                'statusCode': '409',
+	                'headers': {
+	                            'Content-Type': 'application/json',
+	                            'Access-Control-Allow-Origin': '*'
+	                            },
+	                   })
+
+    # adding kr to server and database
+
+    db_path = current_app.config['KR_REPO_DB_PATH'] + ':' +  dir_name
+    dbobj = current_repo.create_dbrepo(db_path)
+    current_app.append_repo_obj(dir_name,dbobj)
+
+    return jsonify({
+                'statusCode': '200',
+                'headers': {
+                            'Content-Type': 'application/json',
+                            'Access-Control-Allow-Origin': '*'
+                            },
+                   })
+
+
 

@@ -7,6 +7,7 @@ import traceback
 import math
 import uuid
 import mimetypes
+import json
 
 import six
 from flask import Flask, current_app, render_template, request, session, Blueprint, g
@@ -42,7 +43,6 @@ class KnowledgeFlask(Flask):
         Flask.__init__(self, __name__,
                        template_folder='templates',
                        static_folder='static') # Set to none so that the static path is supplied by host and not this flask app
-        print("KNowledgeFlask was initialised though")
         # Add unique identifier for this application isinstance
         self.uuid = str(uuid.uuid4())
         if 'KNOWLEDGE_REPO_MASTER_UUID' not in os.environ:
@@ -291,7 +291,7 @@ class KnowledgeFlask(Flask):
                 return datetime.strftime(date, '%Y-%m-%d')
             except:
                 return date
-
+        
     
     def append_repo(self,name,uri):
         temp = self.repository
@@ -302,23 +302,26 @@ class KnowledgeFlask(Flask):
     def get_kr_list(self): 
         host=os.environ['POLLY_API_URL']
         header = {'public-token' : request.cookies.get('public-token')}
-        resp = requests.get("https://{host}/project".format(host=host),headers=header)
+        resp = requests.get("{host}/project".format(host=host),headers=header)
         krs_total = []
         for item in resp.json():
             pid = item['id']
-            kr_proj = requests.get("https://{host}/project?id={pid}".format(host=host,pid=pid),headers = header)
-            krs_total = krs_total + [(pid,kr) for kr in kr_proj.json()['Knowledge_repo']]
-
+            proj_name = item['name']
+            kr_proj = requests.get("{host}/project?id={pid}".format(host=host,pid=pid),headers = header)
+            krs_total = krs_total + [(pid,proj_name,kr) for kr in kr_proj.json()['Knowledge_repo']]
         return krs_total
 
     def is_kr_shared(self,kr): 
         host=os.environ['POLLY_API_URL']
         pid, repo = kr.split('/')
-        
-        resp = requests.get("https://%s/project?id=%s"%(host,pid),cookies=request.cookies)
-        
-        resp_obj = resp.json()
-        if 'messages' in resp_obj.keys():
+        header = {'public-token' : request.cookies.get('public-token')}
+        resp = requests.get("%s/project?id=%s"%(host,pid),headers=header)
+        try:
+            resp_obj = resp.json()
+        except json.decoder.JSONDecodeError:
+            return False
+
+        if 'message' in resp_obj.keys():
             return False
         else:
             return True

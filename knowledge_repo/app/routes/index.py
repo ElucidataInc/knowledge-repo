@@ -8,18 +8,22 @@ This includes:
 """
 import os
 import json
+import logging
 from builtins import str
 from collections import namedtuple
 from flask import request, render_template, redirect, Blueprint, current_app, make_response, url_for
 from flask_login import login_required
-from sqlalchemy import case, desc, func
+from sqlalchemy import case, desc, func, or_
 
 from .. import permissions
-from ..proxies import db_session, current_repo
+from ..proxies import db_session, current_repo, current_user
 from ..utils.posts import get_posts
 from ..models import Post, Tag, User, PageView
-from ..utils.requests import from_request_get_feed_params
+from ..utils.requests import from_url_get_feed_params
 from ..utils.render import render_post_tldr
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 blueprint = Blueprint(
     'index', __name__, template_folder='../templates', static_folder='../static')
@@ -56,13 +60,17 @@ def render_index():
 def render_favorites():
     """ Renders the index-feed view for posts that are liked """
 
-    feed_params = from_request_get_feed_params(request)
+    feed_params = from_url_get_feed_params(request.url)
     user_id = feed_params['user_id']
 
     user = (db_session.query(User)
             .filter(User.id == user_id)
             .first())
     posts = user.liked_posts
+
+    prev_filters = dict(request.args)
+    if 'filters' in prev_filters:
+      del prev_filters['filters']
 
     post_stats = {post.path: {'all_views': post.view_count,
                               'distinct_views': post.view_user_count,
@@ -73,7 +81,8 @@ def render_favorites():
                            feed_params=feed_params,
                            posts=posts,
                            post_stats=post_stats,
-                           top_header='Favorites')
+                           top_header='Favorites',
+                           prev_filters = prev_filters)
 
 
 @blueprint.route('/feed')
@@ -86,14 +95,63 @@ def render_feed():
     # Given a KR argument, show the contents of that KR
     # If no such argument, redirect to "My Posts"
 
+    feed_params = from_url_get_feed_params(request.url)
+    user_id = feed_params['user_id']
+    user = (db_session.query(User)
+            .filter(User.id == user_id)
+            .first())
+
+    prev_filters = dict(request.args)
+
+    if 'filters' in prev_filters:
+      del prev_filters['filters']
+
+    if 'filters' in request.args.keys() and feed_params['filters'] == '': # edge case when enter is pressed in search bar without any query, showing no result
+        return render_template("index-feed.html",
+                                feed_params = feed_params,
+                                posts = [],
+                                post_stats = {},
+                                top_header = 'Knowledge Feed',
+                                prev_filters = prev_filters)
+
+    if 'kr' in request.args.keys():
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+
+    if ('kr' not in request.args.keys() and 'filters' not in request.args.keys() and 'authors' not in request.args.keys()):
+        return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+    else:
+        posts, post_stats = get_posts(feed_params)
+
+    for post in posts:
+        post.tldr = render_post_tldr(post)
+    return render_template("index-feed.html",
+                           feed_params=feed_params,
+                           posts=posts,
+                           post_stats=post_stats,
+                           top_header='Knowledge Feed',
+                           prev_filters = prev_filters)
+
+
+@blueprint.route('/table')
+@PageView.logged
+@permissions.index_view.require()
+def render_table():
+    """Renders the index-table view"""
     feed_params = from_request_get_feed_params(request)
+    #posts, post_stats = get_posts(feed_params)
+    folder = None
     user_id = feed_params['user_id']
     user = (db_session.query(User)
             .filter(User.id == user_id)
             .first())
     if ('kr' not in request.args.keys()):
         if ('authors' not in request.args.keys()):
-            return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+            return redirect(url_for("index.render_table")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
         else:
             posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
     else:
@@ -113,28 +171,23 @@ def render_feed():
 
     for post in posts:
         post.tldr = render_post_tldr(post)
-    return render_template("index-feed.html",
+    return render_template("index-table.html",
                            feed_params=feed_params,
                            posts=posts,
+                           kr = folder,
                            post_stats=post_stats,
-                           top_header='Knowledge Feed')
+                           top_header=feed_params)
 
 
-@blueprint.route('/table')
-@PageView.logged
-@permissions.index_view.require()
-def render_table():
-    """Renders the index-table view"""
-    #feed_params = from_request_get_feed_params(request)
-    #posts, post_stats = get_posts(feed_params)
     # TODO reference stats inside the template
-    return render_template("permission_denied.html")
-    #return render_template("index-table.html",
-    #                       posts=posts,
-    #                       post_stats=post_stats,
-    #                       top_header="Knowledge Table",
-    #                       feed_params=feed_params)
-
+    #return render_template("permission_denied.html")
+    '''
+    return render_template("index-table.html",
+                           posts=posts,
+                           post_stats=post_stats,
+                           top_header="Knowledge Table",
+                           feed_params=feed_params)
+    '''
 
 @blueprint.route('/cluster')
 @PageView.logged
@@ -144,7 +197,33 @@ def render_cluster():
     # we don't use the from_request_get_feed_params because some of the
     # defaults are different
     
-    return render_template("permission_denied.html")
+    feed_params = from_request_get_feed_params(request)
+    user_id = feed_params['user_id']
+    user = (db_session.query(User)
+            .filter(User.id == user_id)
+            .first())
+    #return render_template("permission_denied.html")
+    folder = None
+    folder_flag = None
+    if 'kr' in request.args.keys():
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+    
+    try:
+        kr_list = current_app.get_kr_list()
+    except ValueError:
+        return redirect("https://%s/?next=%s"%(request.host,request.full_path))
+
+    reference ={}
+    folders = []
+    for pid,pname,krname in kr_list:
+        reference[int(pid)] = pname
+        folders.append('{pid}/{name}/%'.format(pid = pid,name = krname))
+    
     filters = request.args.get('filters', '')
     sort_by = request.args.get('sort_by', 'alpha')
     group_by = request.args.get('group_by', 'folder')
@@ -152,10 +231,16 @@ def render_cluster():
     sort_desc = not bool(request.args.get('sort_asc', ''))
 
     excluded_tags = current_app.config.get('EXCLUDED_TAGS', [])
-    post_query = (db_session.query(Post)
+    
+    folder_flag = folder
+    if folder:
+        post_query = (db_session.query(Post)
                             .filter(Post.is_published)
+                            .filter(func.lower(Post.path).like(folder+'/%'))
                             .filter(~Post.tags.any(Tag.name.in_(excluded_tags))))
-
+    else:
+        post_query = (db_session.query(Post).filter(Post.is_published)
+                                            .filter(or_(*[Post.path.like(fol) for fol in folders])))
     if filters:
         filter_set = filters.split(" ")
         for elem in filter_set:
@@ -170,15 +255,28 @@ def render_cluster():
     if group_by == "author":
         author_to_posts = {}
         authors = (db_session.query(User).all())
+
+        allowed_posts = post_query.all()
+        for post in allowed_posts:
+            authors += post.authors
         for author in authors:
             author_posts = [
                 ClusterPost(name=post.title, is_post=True,
                             children_count=0, content=post)
                 for post in author.posts
-                if post.is_published and not post.contains_excluded_tag
+                if post.is_published and not post.contains_excluded_tag and post in allowed_posts
             ]
             if author_posts:
-                author_to_posts[author.format_name] = author_posts
+                display_name = author.format_name
+                if '@' in display_name:
+                    username,domain = display_name.split('@')
+                    if '.' in username:
+                        fname,lname=username.split('.')
+                        display_name = "%s %s"%(fname,lname)
+                    else:
+                        display_name = "%s"%username
+                    
+                author_to_posts[display_name] = author_posts
         grouped_data = [
             ClusterPost(name=k, is_post=False,
                         children_count=len(v), content=v)
@@ -187,16 +285,22 @@ def render_cluster():
 
     elif group_by == "tags":
         tags_to_posts = {}
+        '''
         all_tags = (db_session.query(Tag)
                               .filter(~Tag.name.in_(excluded_tags))
                               .all())
+        '''
+        all_tags = []
+        allowed_posts = post_query.all()
+        for post in allowed_posts:
+            all_tags += post.tags
 
         for tag in all_tags:
             tag_posts = [
                 ClusterPost(name=post.title, is_post=True,
                             children_count=0, content=post)
                 for post in tag.posts
-                if post.is_published and not post.contains_excluded_tag
+                if post.is_published and not post.contains_excluded_tag and post in allowed_posts
             ]
             if tag_posts:
                 tags_to_posts[tag.name] = tag_posts
@@ -211,9 +315,9 @@ def render_cluster():
 
         # group by folder
         folder_to_posts = {}
-
         for post in posts:
             folder_hierarchy = post.path.split('/')
+            folder_hierarchy[0] = reference[int(folder_hierarchy[0])]    
             cursor = folder_to_posts
 
             for folder in folder_hierarchy[:-1]:
@@ -282,6 +386,7 @@ def render_cluster():
                            grouped_data=grouped_data,
                            filters=filters,
                            sort_by=sort_by,
+                           kr = folder_flag,
                            group_by=group_by,
                            tag=request_tag)
 
@@ -311,22 +416,15 @@ def ajax_post_typeahead():
 
     # this a string of the search term
     search_terms = request.args.get('search', '')
-    search_terms = search_terms.split(" ")
-    case_statements = []
-    for term in search_terms:
-        case_stmt = case([(Post.keywords.ilike('%' + term.strip() + '%'), 1)], else_=0)
-        case_statements += [case_stmt]
-
-    match_score = sum(case_statements).label("match_score")
-
-    posts = (db_session.query(Post, match_score)
-                       .filter(Post.status == current_repo.PostStatus.PUBLISHED.value)
-                       .order_by(desc(match_score))
-                       .limit(5)
-                       .all())
-
     matches = []
-    for (post, count) in posts:
+
+    prev_url = request.referrer
+    feed_params = from_url_get_feed_params(prev_url)
+    feed_params['filters'] = search_terms
+
+    posts, _ = get_posts(feed_params)
+
+    for post in posts:
         authors_str = [author.format_name for author in post.authors]
         typeahead_entry = {'author': authors_str,
                            'title': str(post.title),
