@@ -1,3 +1,4 @@
+
 # Script for CD of Knowledge Repo (KR) deployment on Elastic Beanstalk (EB)
 # Method: Native approach - direct deployment, without docker.
 #   > For Docker approach config, refer to: 
