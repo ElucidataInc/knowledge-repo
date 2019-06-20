@@ -67,6 +67,15 @@ def render_favorites():
             .filter(User.id == user_id)
             .first())
     posts = user.liked_posts
+    folder = None
+
+    if 'kr' in request.args.keys():
+        folder = request.args.get('kr')
+        try:
+            if not current_app.is_kr_shared(folder):
+                return render_template("permission_denied.html")
+        except ValueError:
+            return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
 
     prev_filters = dict(request.args)
     if 'filters' in prev_filters:
@@ -81,6 +90,7 @@ def render_favorites():
                            feed_params=feed_params,
                            posts=posts,
                            post_stats=post_stats,
+                           kr = folder,
                            top_header='Favorites',
                            prev_filters = prev_filters)
 
@@ -106,13 +116,7 @@ def render_feed():
     if 'filters' in prev_filters:
       del prev_filters['filters']
 
-    if 'filters' in request.args.keys() and feed_params['filters'] == '': # edge case when enter is pressed in search bar without any query, showing no result
-        return render_template("index-feed.html",
-                                feed_params = feed_params,
-                                posts = [],
-                                post_stats = {},
-                                top_header = 'Knowledge Feed',
-                                prev_filters = prev_filters)
+    folder = None
 
     if 'kr' in request.args.keys():
         folder = request.args.get('kr')
@@ -120,7 +124,16 @@ def render_feed():
             if not current_app.is_kr_shared(folder):
                 return render_template("permission_denied.html")
         except ValueError:
-            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+            return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
+
+    if 'filters' in request.args.keys() and feed_params['filters'] == '': # edge case when enter is pressed in search bar without any query, showing no result
+        return render_template("index-feed.html",
+                                feed_params = feed_params,
+                                posts = [],
+                                post_stats = {},
+                                kr = folder,
+                                top_header = 'Knowledge Feed',
+                                prev_filters = prev_filters)
 
     if ('kr' not in request.args.keys() and 'filters' not in request.args.keys() and 'authors' not in request.args.keys()):
         return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
@@ -132,6 +145,7 @@ def render_feed():
     return render_template("index-feed.html",
                            feed_params=feed_params,
                            posts=posts,
+                           kr = folder,
                            post_stats=post_stats,
                            top_header='Knowledge Feed',
                            prev_filters = prev_filters)
@@ -142,32 +156,26 @@ def render_feed():
 @permissions.index_view.require()
 def render_table():
     """Renders the index-table view"""
-    feed_params = from_request_get_feed_params(request)
+    feed_params = from_url_get_feed_params(request.url)
     #posts, post_stats = get_posts(feed_params)
     folder = None
     user_id = feed_params['user_id']
     user = (db_session.query(User)
             .filter(User.id == user_id)
             .first())
-    if ('kr' not in request.args.keys()):
-        if ('authors' not in request.args.keys()):
-            return redirect(url_for("index.render_table")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
-        else:
-            posts, post_stats = get_posts(feed_params) # If authors already present, we are in the "My Post" situation. Just go ahead. 
-    else:
+
+    if 'kr' in request.args.keys():
         folder = request.args.get('kr')
         try:
             if not current_app.is_kr_shared(folder):
                 return render_template("permission_denied.html")
         except ValueError:
-            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
-            
-        posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
-                .filter(func.lower(Post.path).like(folder + '/%')))
-        post_stats = {post.path: {'all_views': post.view_count,
-                              'distinct_views': post.view_user_count,
-                              'total_likes': post.vote_count,
-                              'total_comments': post.comment_count} for post in posts}
+            return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
+
+    if ('kr' not in request.args.keys() and 'authors' not in request.args.keys()):
+        return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+    else:
+        posts, post_stats = get_posts(feed_params)
 
     for post in posts:
         post.tldr = render_post_tldr(post)
@@ -197,7 +205,7 @@ def render_cluster():
     # we don't use the from_request_get_feed_params because some of the
     # defaults are different
     
-    feed_params = from_request_get_feed_params(request)
+    feed_params = from_url_get_feed_params(request.url)
     user_id = feed_params['user_id']
     user = (db_session.query(User)
             .filter(User.id == user_id)
@@ -211,7 +219,7 @@ def render_cluster():
             if not current_app.is_kr_shared(folder):
                 return render_template("permission_denied.html")
         except ValueError:
-            return redirect("https://{host}/?next={url}".format('.'.join(request.host.split('.')[1:]),request.url))
+            return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
     
     try:
         kr_list = current_app.get_kr_list()
