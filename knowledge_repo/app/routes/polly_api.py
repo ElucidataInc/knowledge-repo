@@ -148,7 +148,6 @@ def add_kr():
         Kr name
     """
     resp = Response(status = 501, mimetype='application/json')
-    resp.headers['Access-Control-Allow-Origin'] = '*'
 
     # handling edge error conditions
     if 'pid' not in request.args:
@@ -192,6 +191,8 @@ def add_kr():
     dbobj = current_repo.create_dbrepo(db_path)
     current_app.append_repo_obj(dir_name,dbobj)
 
+    data = {'error': 'Kr has been created'}
+    resp.data = json.dumps(data)
     resp.status_code = 201
     return resp
 
