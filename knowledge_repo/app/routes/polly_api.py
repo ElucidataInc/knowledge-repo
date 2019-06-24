@@ -130,13 +130,15 @@ def upload_kr():
    #TODO: do more precise exception handling
     #    error = 400
     shutil.rmtree(dir_path)
-    return jsonify({
-                'statusCode': '400' if error==400 else '200',
-                'headers': {
-                            'Content-Type': 'application/json',
-                            'Access-Control-Allow-Origin': '*'
-                            },
-                   })
+    if error == 400:
+      data = {'message': 'successful'}
+      statuscode = 400
+    else:
+      data = {'message' : 'something is wrong'}
+      statuscode = 200
+
+    resp = Response(json.dumps(data), status_code = statuscode, mimetype='application/json')
+    return resp
 
 @blueprint.route('/api/addkr')
 @PageView.logged
@@ -147,17 +149,17 @@ def add_kr():
         Project id
         Kr name
     """
-    resp = Response(status = 501, mimetype='application/json')
+    resp = Response(status_code = 501, mimetype='application/json')
 
-    # handling edge error conditions
+    # handling edge cases
     if 'pid' not in request.args:
-      data = {'error' : 'pid is not in arguments'}
+      data = {'message' : 'pid is not in arguments', 'error_id': 1}
       resp.status_code = 400
       resp.data = json.dumps(data)
       return resp
     
     if 'kr' not in request.args:
-      data = {'error' : 'kr is not in arguments'}
+      data = {'message' : 'kr is not in arguments', 'error_id': 2}
       resp.status_code = 400
       resp.data = json.dumps(data)
       return resp
@@ -166,12 +168,12 @@ def add_kr():
     kr_name = request.args.get('kr')
 
     if len(pid) == 0:
-      data = {'error' : 'Pid can not be empty'}
+      data = {'message' : 'Pid can not be empty', 'error_id': 3}
       resp.status_code = 400
       resp.data = json.dumps(data)
     
     if len(kr_name) == 0:
-      data = {'error' : 'Kr name can not be empty'}
+      data = {'message' : 'Kr name can not be empty', 'error_id': 4}
       resp.status_code = 400
       resp.data = json.dumps(data)
 
@@ -181,7 +183,7 @@ def add_kr():
     ret_val = create_kr(kr_name, pid)
     if ret_val == -1:
       resp.status_code = 409
-      data = {'error': 'Kr name already exists'}
+      data = {'message': 'Kr name already exists', 'error_id': 1}
       resp.data = json.dumps(data)
       return resp
 
@@ -191,7 +193,7 @@ def add_kr():
     dbobj = current_repo.create_dbrepo(db_path)
     current_app.append_repo_obj(dir_name,dbobj)
 
-    data = {'error': 'Kr has been created'}
+    data = {'message': 'Kr has been created'}
     resp.data = json.dumps(data)
     resp.status_code = 201
     return resp
