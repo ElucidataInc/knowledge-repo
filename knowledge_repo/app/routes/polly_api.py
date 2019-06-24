@@ -137,7 +137,8 @@ def upload_kr():
       data = {'message' : 'something is wrong'}
       statuscode = 200
 
-    resp = Response(json.dumps(data), status_code = statuscode, mimetype='application/json')
+    resp = Response(json.dumps(data), mimetype='application/json')
+    resp.status_code = statuscode
     return resp
 
 @blueprint.route('/api/addkr')
@@ -149,7 +150,7 @@ def add_kr():
         Project id
         Kr name
     """
-    resp = Response(status_code = 501, mimetype='application/json')
+    resp = Response(mimetype='application/json')
 
     # handling edge cases
     if 'pid' not in request.args:
