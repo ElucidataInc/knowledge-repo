@@ -11,7 +11,7 @@ import os
 import json
 from builtins import str
 from collections import namedtuple
-from flask import request, render_template, redirect, Blueprint, current_app, make_response,jsonify,url_for
+from flask import request, render_template, redirect, Blueprint, current_app, make_response,jsonify,url_for, Response
 from flask_login import login_required
 from sqlalchemy import case, desc
 from sqlalchemy.exc import IntegrityError
@@ -147,21 +147,44 @@ def add_kr():
         Project id
         Kr name
     """
+    resp = Response(status = 501, mimetype='application/json')
+    resp.headers['Access-Control-Allow-Origin'] = '*'
+
+    # handling edge error conditions
+    if 'pid' not in request.args:
+      data = {'error' : 'pid is not in arguments'}
+      resp.status_code = 400
+      resp.data = json.dumps(data)
+      return resp
+    
+    if 'kr' not in request.args:
+      data = {'error' : 'kr is not in arguments'}
+      resp.status_code = 400
+      resp.data = json.dumps(data)
+      return resp
+
     pid = request.args.get('pid')
     kr_name = request.args.get('kr')
+
+    if len(pid) == 0:
+      data = {'error' : 'Pid can not be empty'}
+      resp.status_code = 400
+      resp.data = json.dumps(data)
+    
+    if len(kr_name) == 0:
+      data = {'error' : 'Kr name can not be empty'}
+      resp.status_code = 400
+      resp.data = json.dumps(data)
+
     dir_name = pid + '/' + kr_name
 
     # adding kr to s3 bucket
     ret_val = create_kr(kr_name, pid)
-
     if ret_val == -1:
-	    return jsonify({
-	                'statusCode': '409',
-	                'headers': {
-	                            'Content-Type': 'application/json',
-	                            'Access-Control-Allow-Origin': '*'
-	                            },
-	                   })
+      resp.status_code = 409
+      data = {'error': 'Kr name already exists'}
+      resp.data = json.dumps(data)
+      return resp
 
     # adding kr to server and database
 
@@ -169,13 +192,7 @@ def add_kr():
     dbobj = current_repo.create_dbrepo(db_path)
     current_app.append_repo_obj(dir_name,dbobj)
 
-    return jsonify({
-                'statusCode': '200',
-                'headers': {
-                            'Content-Type': 'application/json',
-                            'Access-Control-Allow-Origin': '*'
-                            },
-                   })
-
+    resp.status_code = 201
+    return resp
 
 
