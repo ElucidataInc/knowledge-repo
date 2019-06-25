@@ -56,7 +56,7 @@ $(document).ready(function() {
           window.location = getUrl(document.location.pathname, $('#searchbar').val());
         }
   });
-
+//
     var padding = $('.tt-menu').outerWidth()
     $('.tt-menu').width($('#searchbar').width() + padding + "px")
 
