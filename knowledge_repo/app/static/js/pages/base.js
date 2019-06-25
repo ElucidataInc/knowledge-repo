@@ -47,7 +47,7 @@ $(document).ready(function() {
 
 
     $('#searchbar').bind('typeahead:select', function(obj, datum, name) {
-        window.location = '/ccbd24f370707c33603102adc7b77123/post/' + encodeURIComponent(datum.path);
+        window.location = '/ccbd24f370707c33603102adc7b77123/post/' + datum.path;
     });
 
     $('#searchbar').keypress(function(event) {
@@ -56,7 +56,7 @@ $(document).ready(function() {
           window.location = getUrl(document.location.pathname, $('#searchbar').val());
         }
   });
-//
+
     var padding = $('.tt-menu').outerWidth()
     $('.tt-menu').width($('#searchbar').width() + padding + "px")
 
