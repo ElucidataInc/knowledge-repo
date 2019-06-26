@@ -35,6 +35,10 @@ def from_url_get_feed_params(url):
         if '%2F' in val:
           val=val.split('%2F')
           val=val[0]+'/'+val[1]
+
+        if '%40' in val:
+          val = val.split('%40')
+          val = val[0] + '@' + val[1]
         feed_params[query] = val
 
       
