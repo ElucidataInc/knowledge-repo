@@ -46,6 +46,11 @@ def from_url_get_feed_params(url):
     feed_params["username"] = username
     feed_params["user_id"] = user_id
 
+    if 'start' in feed_params:
+      feed_params['start'] = int(feed_params['start'])
+    if 'results' in feed_params:
+      feed_params['results'] = int(feed_params['results'])
+
     user_obj = (db_session.query(User)
                           .filter(User.id == user_id)
                           .first())
