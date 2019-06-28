@@ -1,17 +1,47 @@
 {% extends "base.html" %}
 
 {% block content %}
-      <form action = "{{ url_for('api.upload_post') }}" method=post enctype = "multipart/form-data">
+<form action = "{{ url_for('api.upload_post') }}" method=post enctype = "multipart/form-data">
 <table align="center">
-<tr> <td style="padding:5px;">Select File to upload     <td style="padding:5px;">      <input type = "file" name ="file" onclick="googleAnalyticsObject.googleAnalytics(gaUpload,'ipython_upload',categoryKr);"/> </tr>
-<tr> <td style="padding:5px;">Select Repository     <td style="padding:5px;">      <select name="repo">      
-{% for pid,pname,kr in krs %}
-<option value={{pid}}/{{kr}}>{{pname}}/{{kr}}</option>
-{% endfor %}
-</select>
+<tr>
+    <td style="padding:5px;">Select File to upload</td>
+    <td style="padding:5px;">
+      <input type = "file" name ="file" onclick="googleAnalyticsObject.googleAnalytics(gaUpload,'ipython_upload',categoryKr);"/>
+    </td>
+</tr>
+<tr>
+    <td style="padding:5px;">Select Project</td>
+    <td style="padding:5px;">
+      <select name="project" id = "project_add_kr">
+        <option value="Choose Project">Choose Project</option>
+        {% for pid, pname in project_ids %}
+          <option value={{pname}}>{{pname}}</option>
+        {% endfor %}
+      </select>
+    </td>
+</tr>
+<tr>
+  <td style="padding:5px;">Select Repository</td>
+  <td style="padding:5px;">
+    <select name="repo" id = "kr_add_kr">
+      <!-- {% for pid,pname,kr in krs %}
+      <option value={{pid}}/{{kr}}>{{pname}}/{{kr}}</option>
+      {% endfor %} -->
+    </select>
+  </td>
 </tr>
 
-<tr><td style="padding:5px;">Path to upload post to  <td style="padding:5px;"> <input type = "text" name="path" /> </tr>
-<tr><td style="padding:10px;" align="center" colspan=2>         <input type = "submit" value="Upload Post" onclick="googleAnalyticsObject.googleAnalytics(gaUpload,'post_upload',categoryKr);"/>   </tr>
-       </table> </form>
+<tr>
+  <td style="padding:5px;">Path to upload post to</td>
+  <td style="padding:5px;">
+    <input type = "text" name="path" />
+  </td>
+</tr>
+<tr>
+  <td style="padding:10px;" align="center" colspan=2>
+    <input type = "submit" value="Upload Post" onclick="googleAnalyticsObject.googleAnalytics(gaUpload,'post_upload',categoryKr);"/>
+  </td>
+</tr>
+</table>
+</form>
 {% endblock %}

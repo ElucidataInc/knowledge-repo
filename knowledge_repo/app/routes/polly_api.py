@@ -77,10 +77,10 @@ def prep_post_path(path):
 @PageView.logged
 def upload_post_page(): 
     try:
-        kr_list = current_app.get_kr_list()
+        pr_list = current_app.get_project_list()
     except ValueError:
-        return redirect("https://%s/?next=%s"%(request.host,request.full_path))
-    return render_template('upload_page.html',krs = kr_list)
+        return redirect("%s/?next=%s"%(request.host,request.full_path))
+    return render_template('upload_page.html',project_ids = pr_list)
 
 @blueprint.route('/api/uploadpost',methods=['POST'])
 def upload_post():
@@ -177,5 +177,20 @@ def add_kr():
                             },
                    })
 
-
+@blueprint.route('ajax/api/getkr', methods = ['GET'])
+def ajax_get_kr():
+  pname = request.args.get('pname')
+  pr_list = current_app.get_project_list()
+  for proj_id, proj_name in pr_list:
+    if pname == proj_name:
+      pid = proj_id
+  print(pid, pname)
+  kr_return = []
+  if pid is not None:
+    krs = current_app.get_kr_of_project(pid, pname)
+    for pid, pname, kr_name in krs:
+      kr = {}
+      kr['name'] = kr_name
+      kr_return.append(kr)
+  return json.dumps(kr_return)
 
