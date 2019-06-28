@@ -184,7 +184,6 @@ def ajax_get_kr():
   for proj_id, proj_name in pr_list:
     if pname == proj_name:
       pid = proj_id
-  print(pid, pname)
   kr_return = []
   if pid is not None:
     krs = current_app.get_kr_of_project(pid, pname)
