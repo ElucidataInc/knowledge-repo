@@ -37,7 +37,8 @@
     <div class='row row-space-4 panel feed-post'>
       <div class='panel-header panel-light'>
         <div class = "col-md-10">
-          <a href="{{ url_for('posts.render') }}?path={{ post.path }}">
+          <a href="{{url_for('posts.render',path=post.path) }}">
+            <!-- <a href="{{ url_for('posts.render') }}?path={{ post.path }}"> -->
             {{ post.title |title }}
           </a>
         </div>
@@ -89,7 +90,8 @@
             <i>{{ post['tldr']|safe }}</i>
             <br>
             <br>
-            <a href="{{ url_for('posts.render') }}?path={{ post.path }}">Read post</a>
+            <a href="{{url_for('posts.render',path=post.path) }}">Read post</a>
+            <!-- <a href="{{ url_for('posts.render') }}?path={{ post.path }}">Read post</a> -->
           </p>
         </div>
         <div class="col-md-6">
