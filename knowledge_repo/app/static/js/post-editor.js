@@ -74,7 +74,7 @@ var postEditorJx = (function() {
 
 
         if (feedImage === '') {
-            feedImage = 'ccbd24f370707c33603102adc7b77123/static/images/default_thumbnail.png';
+            feedImage = '/ccbd24f370707c33603102adc7b77123/static/images/default_thumbnail.png';
         }
 
         if (!urlExists(feedImage)) {
