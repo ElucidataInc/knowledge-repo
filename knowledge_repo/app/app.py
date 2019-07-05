@@ -298,17 +298,30 @@ class KnowledgeFlask(Flask):
         self.repository = knowledge_repo.KnowledgeRepository.append_for_uri(name,uri,temp)
         #self.db_update_index(check_timeouts=False, force=True )
         return self.repository
-    
-    def get_kr_list(self): 
+
+    def get_project_list(self):
         host=os.environ['POLLY_API_URL']
         header = {'public-token' : request.cookies.get('public-token')}
         resp = requests.get("{host}/project".format(host=host),headers=header)
-        krs_total = []
+        pr_list = []
         for item in resp.json():
             pid = item['id']
             proj_name = item['name']
-            kr_proj = requests.get("{host}/project?id={pid}".format(host=host,pid=pid),headers = header)
-            krs_total = krs_total + [(pid,proj_name,kr) for kr in kr_proj.json()['Knowledge_repo']]
+            pr_list.append((pid, proj_name))
+        return pr_list
+
+    def get_kr_of_project(self, pid, pname):
+        host=os.environ['POLLY_API_URL']
+        header = {'public-token' : request.cookies.get('public-token')}
+        kr_proj = requests.get("{host}/project?id={pid}".format(host=host,pid=pid),headers = header)
+        krs = [(pid, pname, kr) for kr in kr_proj.json()['Knowledge_repo']]
+        return krs
+    
+    def get_kr_list(self):
+        pr_list = self.get_project_list()
+        krs_total = []
+        for pid, pname in pr_list:
+          krs_total += self.get_kr_of_project(pid, pname)
         return krs_total
 
     def is_kr_shared(self,kr): 
