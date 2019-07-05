@@ -23,6 +23,7 @@ from ..models import PageView, Post, assoc_post_tag, Subscription, Tag
 from ..proxies import current_user
 from ..utils.requests import from_url_get_feed_params
 from ..utils.emails import send_subscription_email
+from ..utils.posts import get_posts
 
 blueprint = Blueprint('tag', __name__,
                       template_folder='../templates', static_folder='../static')
@@ -118,7 +119,6 @@ def delete_tags_from_posts():
 @PageView.logged
 @permissions.post_comment.require()
 def render_tag_pages():
-    return render_template("permission_denied.html")
     feed_params = from_url_get_feed_params(request.url)
     start = feed_params['start']
     num_results = feed_params['results']
@@ -143,6 +143,11 @@ def render_tag_pages():
     # get all files with given tag
     tag_posts = tag_obj.posts
     posts = [post for post in tag_posts if post.is_published]
+
+    filtered_posts, _ = get_posts(feed_params)
+
+    final_posts = [post for post in posts if post in filtered_posts]
+    posts = final_posts
 
     feed_params['posts_count'] = len(posts)
     feed_params['page_count'] = int(math.ceil(1.0 * len(posts) / feed_params['results']))
