@@ -119,7 +119,6 @@ def delete_tags_from_posts():
 @PageView.logged
 @permissions.post_comment.require()
 def render_tag_pages():
-    return render_template("permission_denied.html")
     feed_params = from_url_get_feed_params(request.url)
     start = feed_params['start']
     num_results = feed_params['results']
