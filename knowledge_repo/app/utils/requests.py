@@ -35,12 +35,21 @@ def from_url_get_feed_params(url):
         if '%2F' in val:
           val=val.split('%2F')
           val=val[0]+'/'+val[1]
+
+        if '%40' in val:
+          val = val.split('%40')
+          val = val[0] + '@' + val[1]
         feed_params[query] = val
 
       
     username, user_id = current_user.identifier, current_user.id
     feed_params["username"] = username
     feed_params["user_id"] = user_id
+
+    if 'start' in feed_params:
+      feed_params['start'] = int(feed_params['start'])
+    if 'results' in feed_params:
+      feed_params['results'] = int(feed_params['results'])
 
     user_obj = (db_session.query(User)
                           .filter(User.id == user_id)
