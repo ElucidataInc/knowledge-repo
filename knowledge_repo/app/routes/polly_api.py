@@ -89,8 +89,9 @@ def upload_post():
     tempfile = request.files['file']
     temp_path = os.path.join('/tmp',secure_filename(tempfile.filename))
     tempfile.save(temp_path)
+    pid = request.form.get('project')
     repo = request.form.get('repo')
-    path = repo + '/' + request.form.get('path')
+    path = pid + '/' + repo + '/' + request.form.get('path')
     # Just post the post to the path
     try:
         new_post = current_repo.upload_post(temp_path,path)
