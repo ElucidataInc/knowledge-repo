@@ -16,8 +16,12 @@ Knowledge Repo 404
     <center>
         <div class="panel-body">
           <div class="row row-space-2"></div>
-          <h3> Uh oh! Looks like something broke </h3>
-          <text> Try clicking around on the other links while we try and get this page up and running </text>
+          {% if error %}
+            <text>{{error}}</text>
+          {% else %}
+            <h3> Uh oh! Looks like something broke </h3>
+            <text> Try clicking around on the other links while we try and get this page up and running </text>
+          {% endif %}
         </div>
     </center>
   </div>

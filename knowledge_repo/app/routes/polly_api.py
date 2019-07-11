@@ -97,8 +97,8 @@ def upload_post():
     #    update_index_for_post(new_post,path)
         path = prep_post_path(path)
         publish_post_db(new_post,path)
-    except:
-        return render_template("error.html")
+    except RuntimeError as e:
+        return render_template("error.html", error = e)
     return redirect(url_for('posts.render',path=path))
 
 @blueprint.route('/api/uploadkr')
