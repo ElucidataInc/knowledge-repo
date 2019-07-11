@@ -20,7 +20,7 @@ def get_format(filename, format=None):
             if format.startswith('.'):
                 format = format[1:]
         else:
-            raise RuntimeError("Unable to determine a format automatically. Please manually specify the format, and try again.")
+            raise RuntimeError("This file format is not supported.")
     return format
 
 
