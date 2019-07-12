@@ -95,6 +95,15 @@ class KnowledgePostConverter(with_metaclass(SubclassRegisteringABCMeta, object))
 
     @classmethod
     def for_format(cls, kp, format, postprocessors=None, interactive=False):
+        allowed_formats = ['md', 'rmd', 'ipynb']
+        not_allowed_formats = []
+        for key in cls._registry:
+          if key not in allowed_formats:
+            not_allowed_formats.append(key)
+
+        for key in not_allowed_formats:
+          del cls._registry[key]
+
         if format.lower() not in cls._registry:
             raise ValueError("The knowledge repository does not support files of type '{}'. Supported types are: {}."
                              .format(format, ','.join(list(cls._registry.keys()))))
