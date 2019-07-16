@@ -7,6 +7,7 @@ Functions include:
 """
 import inflection
 from flask import g
+from urllib.parse import unquote
 
 from ..proxies import db_session
 from ..models import User
@@ -32,16 +33,9 @@ def from_url_get_feed_params(url):
       url_search_arr = url_search.split('&')
       for filter in url_search_arr:
         query, val = filter.split('=')
-        if '%2F' in val:
-          val=val.split('%2F')
-          val=val[0]+'/'+val[1]
-
-        if '%40' in val:
-          val = val.split('%40')
-          val = val[0] + '@' + val[1]
+        val = unquote(val) # to convert eg %2F to /
         feed_params[query] = val
 
-      
     username, user_id = current_user.identifier, current_user.id
     feed_params["username"] = username
     feed_params["user_id"] = user_id
