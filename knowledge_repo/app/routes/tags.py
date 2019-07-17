@@ -124,6 +124,9 @@ def render_tag_pages():
     num_results = feed_params['results']
     tag = request.args.get('tag', '')
     print(tag)
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
 
     if tag[0] == '#':
         tag = tag[1:]
@@ -185,7 +188,8 @@ def render_tag_pages():
                            tag_pocs=max_author,
                            posts=posts,
                            subscribed=subscribed,
-                           post_stats=post_stats)
+                           post_stats=post_stats,
+                           repo=repo)
 
 
 @render_tag_pages.object_extractor

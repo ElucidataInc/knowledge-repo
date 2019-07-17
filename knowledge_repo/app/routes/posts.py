@@ -26,6 +26,9 @@ def render(path):
     """
     mode = request.args.get('render', 'html')
     username, user_id = current_user.identifier, current_user.id
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
 
     tmpl = 'markdown-rendered.html'
     if mode == 'raw':
@@ -57,12 +60,12 @@ def render(path):
         return abort(404)
     if post.contains_excluded_tag:
         # It's possible that someone gets a direct link to a post that has an excluded tag
-        return render_template("error.html")
+        return render_template("error.html", repo=repo)
 
     if post.private and not (username in post.authors or username in current_repo.config.editors):
         allowed_users = set(user.id for group in post.groups for user in group.users)
         if user_id not in allowed_users:
-            return render_template("permission_ask.html", authors=post.authors_string)
+            return render_template("permission_ask.html", authors=post.authors_string, repo=repo)
 
     rendered = render_post(post, with_toc=True)
     raw_post = render_post_raw(post) if mode == 'raw' else None
@@ -91,7 +94,7 @@ def render(path):
     
     postpath = path.split('/')
 
-    krpath = url_for('index.render_feed',kr='/'.join(postpath[:2]))
+    krpath = url_for('index.render_feed',kr='/'.join(postpath[:2])) + "&repo="+repo
     krname = postpath[1]
     rendered = render_template(tmpl,
                                html=rendered['html'],
@@ -119,7 +122,8 @@ def render(path):
                                downloads=post.kp.src_paths,
                                post_page=True,
                                krlink=krpath,
-                               krname=krname)
+                               krname=krname,
+                               repo=repo)
 
     return rendered
 

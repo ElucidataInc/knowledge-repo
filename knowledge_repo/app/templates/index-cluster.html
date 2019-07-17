@@ -50,7 +50,7 @@
   {%- for cluster, is_post, count, contents in grouped_data recursive %}
     {%- if is_post %}
       <li class="cluster_post" style="list-style-type:circle">
-        <a href="{{url_for('posts.render',path = contents.path)}}">
+        <a href="{{url_for('posts.render',path = contents.path)}}&repo={{repo}}">
           {{ contents.title|replace('_', ' '|title )}}
         </a>
       </li>
