@@ -117,6 +117,9 @@ def render_feed():
       del prev_filters['filters']
 
     folder = None
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
 
     if 'kr' in request.args.keys():
         folder = request.args.get('kr')
@@ -133,10 +136,11 @@ def render_feed():
                                 post_stats = {},
                                 kr = folder,
                                 top_header = 'Knowledge Feed',
-                                prev_filters = prev_filters)
+                                prev_filters = prev_filters,
+                                repo=repo)
 
     if ('kr' not in request.args.keys() and 'filters' not in request.args.keys() and 'authors' not in request.args.keys()):
-        return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+        return redirect(url_for("index.render_feed")+"?authors="+user.email + "&repo="+repo) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
     else:
         posts, post_stats = get_posts(feed_params)
 
@@ -148,7 +152,8 @@ def render_feed():
                            kr = folder,
                            post_stats=post_stats,
                            top_header='Knowledge Feed',
-                           prev_filters = prev_filters)
+                           prev_filters=prev_filters,
+                           repo=repo)
 
 
 @blueprint.route('/table')

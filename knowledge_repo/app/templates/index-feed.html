@@ -8,7 +8,7 @@
 {% macro render_tag(tag, post_id) %}
 
 {% set tag_flat = tag.replace("/", "__") %}
-    <a  href="{{url_for('tag.render_tag_pages')}}?tag={{ tag|urlencode }}"
+    <a  href="{{url_for('tag.render_tag_pages')}}?tag={{ tag|urlencode }}&repo={{repo}}"
         data-tag-name="{{ tag_flat }}"
         data-container="body"
         data-toggle="popover"
@@ -38,7 +38,7 @@
 
 <div id="feed-posts">
     {% for post in posts %}
-    <div class="row feed-post" data-path='{{post.path|urlencode}}' data-url="{{url_for('posts.render', path=post.path)}}" onclick="googleAnalyticsObject.googleAnalytics(gaUIInteraction,'post_click',categoryKr);">
+    <div class="row feed-post" data-path='{{post.path|urlencode}}' data-url="{{url_for('posts.render', path=post.path)}}&repo={{repo}}" onclick="googleAnalyticsObject.googleAnalytics(gaUIInteraction,'post_click',categoryKr);">
         <div class='feed-thumbnail'>
             <img src="{{ post['thumbnail'] if post['thumbnail'] else url_for('admin.static', filename='/images/default_thumbnail.png') }}" />
         </div>
