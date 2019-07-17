@@ -50,30 +50,30 @@
 <!-- creating if else block to create hyper links to a KR feed if that is possible -->
 {% if kr is not none %} 
 
-        <a href="{{url_for('index.render_feed',kr=kr)}}&repo={{repo}}" class="btn btn-default btn-card no-underline" role="button" onclick="googleAnalyticsObject.googleAnalytics(gaUIInteraction,'card_filter',categoryKr);"  >
+        <a href="{{url_for('index.render_feed')}}?kr={{kr}}&repo={{repo}}" class="btn btn-default btn-card no-underline" role="button" onclick="googleAnalyticsObject.googleAnalytics(gaUIInteraction,'card_filter',categoryKr);"  >
           <i class="glyphicon glyphicon-post-org glyphicon-align-justify"></i>
           <span class="index-view-name"> Card </span>
         </a>
-        <a href="{{url_for('index.render_table',kr=kr)}}&repo={{repo}}" class="btn btn-default btn-table no-underline" role="button">
+        <a href="{{url_for('index.render_table')}}?kr={{kr}}&repo={{repo}}" class="btn btn-default btn-table no-underline" role="button">
           <i class="glyphicon glyphicon-post-org glyphicon-th"></i>
           <span class="index-view-name"> Table </span>
         </a>
 
-        <a href="{{url_for('index.render_cluster',kr=kr)}}&repo={{repo}}" class="btn btn-default btn-cluster no-underline" role="button">
+        <a href="{{url_for('index.render_cluster')}}?kr={{kr}}&repo={{repo}}" class="btn btn-default btn-cluster no-underline" role="button">
           <i class="glyphicon glyphicon-post-org glyphicon-th-list"></i>
           <span class="index-view-name"> Cluster </span>
         </a> 
 {% else %}
-         <a href="{{url_for('index.render_feed')}}&repo={{repo}}&kr={{repo}}" class="btn btn-default btn-card no-underline" role="button">
+         <a href="{{url_for('index.render_feed')}}?repo={{repo}}&kr={{repo}}" class="btn btn-default btn-card no-underline" role="button">
           <i class="glyphicon glyphicon-post-org glyphicon-align-justify"></i>
           <span class="index-view-name"> Card </span>
         </a>
-        <a href="{{url_for('index.render_table')}}&repo={{repo}}&kr={{repo}}" class="btn btn-default btn-table no-underline" role="button">
+        <a href="{{url_for('index.render_table')}}?repo={{repo}}&kr={{repo}}" class="btn btn-default btn-table no-underline" role="button">
           <i class="glyphicon glyphicon-post-org glyphicon-th"></i>
           <span class="index-view-name"> Table </span>
         </a>
 
-        <a href="{{url_for('index.render_cluster')}}&repo={{repo}}&kr={{repo}}" class="btn btn-default btn-cluster no-underline" role="button">
+        <a href="{{url_for('index.render_cluster')}}?repo={{repo}}&kr={{repo}}" class="btn btn-default btn-cluster no-underline" role="button">
           <i class="glyphicon glyphicon-post-org glyphicon-th-list"></i>
           <span class="index-view-name"> Cluster </span>
         </a> 
