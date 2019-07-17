@@ -132,7 +132,7 @@ def render_tag_pages():
         tag = tag[1:]
 
     if tag in current_app.config.get('EXCLUDED_TAGS', []):
-        return render_template('error.html')
+        return render_template('error.html', repo=repo)
 
     tag_obj = (db_session.query(Tag)
                .filter(Tag.name == tag)

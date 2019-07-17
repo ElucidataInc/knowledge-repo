@@ -80,12 +80,18 @@ def upload_post_page():
         pr_list = current_app.get_project_list()
     except ValueError:
         return redirect("%s/?next=%s"%(request.host,request.full_path))
-    return render_template('upload_page.html',project_ids = pr_list)
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
+    return render_template('upload_page.html',project_ids = pr_list, repo=repo)
 
 @blueprint.route('/api/uploadpost',methods=['POST'])
 def upload_post():
     # Access the file
     #TODO: Put everything in try catch
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
     tempfile = request.files['file']
     temp_path = os.path.join('/tmp',secure_filename(tempfile.filename))
     tempfile.save(temp_path)
@@ -99,8 +105,8 @@ def upload_post():
         path = prep_post_path(path)
         publish_post_db(new_post,path)
     except Exception as e:
-        return render_template("error.html", error = e)
-    return redirect(url_for('posts.render',path=path))
+        return render_template("error.html", error = e, repo=repo)
+    return redirect(url_for('posts.render',path=path)+'&repo='+repo)
 
 @blueprint.route('/api/uploadkr')
 @PageView.logged
