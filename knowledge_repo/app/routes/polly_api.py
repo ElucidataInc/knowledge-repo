@@ -106,7 +106,7 @@ def upload_post():
         publish_post_db(new_post,path)
     except Exception as e:
         return render_template("error.html", error = e, repo=repo)
-    return redirect(url_for('posts.render',path=path)+'&repo='+repo)
+    return redirect(url_for('posts.render',path=path)+'?repo='+repo)
 
 @blueprint.route('/api/uploadkr')
 @PageView.logged
