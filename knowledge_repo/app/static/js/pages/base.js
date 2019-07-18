@@ -47,7 +47,18 @@ $(document).ready(function() {
 
 
     $('#searchbar').bind('typeahead:select', function(obj, datum, name) {
-        window.location = '/ccbd24f370707c33603102adc7b77123/post/' + datum.path;
+        var search_args = window.location.search.split('&')
+        var repo_val = ""
+        for(var i=0;i<search_args.length;i++)
+        {
+            search_arg = search_args[i]
+            if(search_arg[0]=='?')
+                search_arg = search_arg.slice(1)
+            if(search_arg.startsWith('repo'))
+                repo_val = search_arg
+        }
+        console.log(repo_val)
+        window.location = '/ccbd24f370707c33603102adc7b77123/post/' + datum.path + '&' + repo_val;
     });
 
     $('#searchbar').keypress(function(event) {
