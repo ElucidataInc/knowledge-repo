@@ -57,8 +57,7 @@ $(document).ready(function() {
             if(search_arg.startsWith('repo'))
                 repo_val = search_arg
         }
-        console.log(repo_val)
-        window.location = '/ccbd24f370707c33603102adc7b77123/post/' + datum.path + '&' + repo_val;
+        window.location = '/ccbd24f370707c33603102adc7b77123/post/' + datum.path + '?' + repo_val;
     });
 
     $('#searchbar').keypress(function(event) {
