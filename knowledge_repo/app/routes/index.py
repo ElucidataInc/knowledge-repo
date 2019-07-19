@@ -69,11 +69,15 @@ def render_favorites():
     posts = user.liked_posts
     folder = None
 
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
+
     if 'kr' in request.args.keys():
         folder = request.args.get('kr')
         try:
             if not current_app.is_kr_shared(folder):
-                return render_template("permission_denied.html")
+                return render_template("permission_denied.html", repo=repo)
         except ValueError:
             return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
 
@@ -92,7 +96,8 @@ def render_favorites():
                            post_stats=post_stats,
                            kr = folder,
                            top_header='Favorites',
-                           prev_filters = prev_filters)
+                           prev_filters = prev_filters,
+                           repo = repo)
 
 
 @blueprint.route('/feed')
@@ -117,12 +122,15 @@ def render_feed():
       del prev_filters['filters']
 
     folder = None
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
 
     if 'kr' in request.args.keys():
         folder = request.args.get('kr')
         try:
             if not current_app.is_kr_shared(folder):
-                return render_template("permission_denied.html")
+                return render_template("permission_denied.html", repo=repo)
         except ValueError:
             return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
 
@@ -133,10 +141,11 @@ def render_feed():
                                 post_stats = {},
                                 kr = folder,
                                 top_header = 'Knowledge Feed',
-                                prev_filters = prev_filters)
+                                prev_filters = prev_filters,
+                                repo=repo)
 
     if ('kr' not in request.args.keys() and 'filters' not in request.args.keys() and 'authors' not in request.args.keys()):
-        return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+        return redirect(url_for("index.render_feed")+"?authors="+user.email + "&repo="+repo) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
     else:
         posts, post_stats = get_posts(feed_params)
 
@@ -148,7 +157,8 @@ def render_feed():
                            kr = folder,
                            post_stats=post_stats,
                            top_header='Knowledge Feed',
-                           prev_filters = prev_filters)
+                           prev_filters=prev_filters,
+                           repo=repo)
 
 
 @blueprint.route('/table')
@@ -164,16 +174,20 @@ def render_table():
             .filter(User.id == user_id)
             .first())
 
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
+
     if 'kr' in request.args.keys():
         folder = request.args.get('kr')
         try:
             if not current_app.is_kr_shared(folder):
-                return render_template("permission_denied.html")
+                return render_template("permission_denied.html", repo=repo)
         except ValueError:
             return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
 
     if ('kr' not in request.args.keys() and 'authors' not in request.args.keys()):
-        return redirect(url_for("index.render_feed")+"?authors="+user.email) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
+        return redirect(url_for("index.render_feed")+"?authors="+user.email+'&repo='+repo) # Redirection to this function itself. Redirecting instead of continuiung here to maintain consistent URL as far as user is concerned
     else:
         posts, post_stats = get_posts(feed_params)
 
@@ -184,7 +198,8 @@ def render_table():
                            posts=posts,
                            kr = folder,
                            post_stats=post_stats,
-                           top_header=feed_params)
+                           top_header=feed_params,
+                           repo=repo)
 
 
     # TODO reference stats inside the template
@@ -213,11 +228,16 @@ def render_cluster():
     #return render_template("permission_denied.html")
     folder = None
     folder_flag = None
+
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
+
     if 'kr' in request.args.keys():
         folder = request.args.get('kr')
         try:
             if not current_app.is_kr_shared(folder):
-                return render_template("permission_denied.html")
+                return render_template("permission_denied.html", repo=repo)
         except ValueError:
             return redirect("https://{host}/?next={url}".format(host = '.'.join(request.host.split('.')[1:]),url = request.url))
     
@@ -396,7 +416,8 @@ def render_cluster():
                            sort_by=sort_by,
                            kr = folder_flag,
                            group_by=group_by,
-                           tag=request_tag)
+                           tag=request_tag,
+                           repo=repo)
 
 
 @blueprint.route('/create')

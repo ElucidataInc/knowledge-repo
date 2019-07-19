@@ -124,14 +124,16 @@ def render_tag_pages():
     start = feed_params['start']
     num_results = feed_params['results']
     tag = request.args.get('tag', '')
-
-    tag = unquote(tag) # to convert eg %20 to spaces
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
+    tag = unquote(tag) # to convert eg %20 to space
 
     if tag[0] == '#':
         tag = tag[1:]
 
     if tag in current_app.config.get('EXCLUDED_TAGS', []):
-        return render_template('error.html')
+        return render_template('error.html', repo=repo)
 
     tag_obj = (db_session.query(Tag)
                .filter(Tag.name == tag)
@@ -187,7 +189,8 @@ def render_tag_pages():
                            tag_pocs=max_author,
                            posts=posts,
                            subscribed=subscribed,
-                           post_stats=post_stats)
+                           post_stats=post_stats,
+                           repo=repo)
 
 
 @render_tag_pages.object_extractor

@@ -45,8 +45,8 @@
       <div class="row">
         <div class="col-md-12">
             <ul class="nav nav-tabs" style='margin-bottom: -1px; position: relative; z-index: 1;'>
-                <li role="presentation" class="tab-rendered"><a href="?">HTML</a></li>
-                <li role="presentation" class="tab-raw"><a href="?render=raw">Markdown</a></li>
+                <li role="presentation" class="tab-rendered"><a href="?repo={{repo}}">HTML</a></li>
+                <li role="presentation" class="tab-raw"><a href="?render=raw&repo={{repo}}">Markdown</a></li>
                 {% if is_author and show_webeditor_button %}
                 <li role="presentation"><a href="/edit/{{post_path}}">Edit</a></li>
                 {% endif %}
