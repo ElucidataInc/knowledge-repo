@@ -314,9 +314,7 @@ class KnowledgeFlask(Flask):
     def is_kr_shared(self,kr): 
         host=os.environ['POLLY_API_URL']
         pid, repo = kr.split('/')
-        print("-------------------------------")
-        print(pid, repo)
-        print("-------------------------------")
+        
         resp = requests.get("https://%s/project?id=%s"%(host,pid),cookies=request.cookies)
         
         resp_obj = resp.json()
