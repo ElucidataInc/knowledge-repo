@@ -16,6 +16,7 @@ from sqlalchemy import and_
 import logging
 import math
 from builtins import str
+from urllib.parse import unquote
 
 from .. import permissions
 from ..proxies import db_session
@@ -123,10 +124,10 @@ def render_tag_pages():
     start = feed_params['start']
     num_results = feed_params['results']
     tag = request.args.get('tag', '')
-    print(tag)
     repo = request.args.get('repo')
     if repo is None:
         return render_template("error.html", error="repo does not exist in url")
+    tag = unquote(tag) # to convert eg %20 to space
 
     if tag[0] == '#':
         tag = tag[1:]
