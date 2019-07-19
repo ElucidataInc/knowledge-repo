@@ -225,7 +225,14 @@
     else
       url='https://api.polly.elucidata.io/userpool';
 
+      console.log("----------------------------")
+      console.log(url)
+      console.log("----------------------------")
+
     const cognito_data = get_cognitodata(url);
+    console.log("----------------------------")
+      console.log(cognito_data)
+      console.log("----------------------------")
     function refreshSessionOnExpire() {
       AWS.config.region = cognito_data.cognito_user_pool_region
       // Setting the pool
@@ -240,9 +247,15 @@
           secure: false
         })
       };
+      console.log("----------------------------")
+      console.log(poolData)
+      console.log("----------------------------")
       return new Promise((resolve, reject) => {
         var userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
         var cognitoUser = userPool.getCurrentUser();
+        console.log("----------------------------")
+      console.log(cognitoUser)
+      console.log("----------------------------")
         if (cognitoUser === null) {
         //  window.location.href = "/?next=" + window.location.href;
         console.log("CognitoUserNotFound");
