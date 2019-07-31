@@ -159,8 +159,17 @@ AUTH_USE_REQUEST_HEADERS = True
 # Currently only 'identifier', 'avatar_uri', 'name' and 'email' are supported.
 # If this method returns `None`, or `identifier` is not supplied, then the
 # authorization flow will fall back to other authentication methods.
-def AUTH_MAP_REQUEST_HEADERS(cookies):
+def AUTH_MAP_REQUEST_HEADERS(request):
     import base64,json
+    import requests as req
+
+    resp = req.get("https://api.devpolly.elucidata.io/login-validate")
+
+    if resp.status_code != 200:
+        return ('error',{  
+                    'name' : 'none'
+                })
+    
     public_token = [cookies[key] for key in cookies.keys() if (key.startswith("CognitoIdentityServiceProvider") and key.endswith("idToken"))]
     if len(public_token)==0:
         return{  'identifier' : 'Anonymous' ,
@@ -171,13 +180,13 @@ def AUTH_MAP_REQUEST_HEADERS(cookies):
     id_token += "="*((4-len(id_token)%4)%4)
     token_str = base64.b64decode(id_token).decode('ascii')
     token = json.loads(token_str)
-    return {
-              
+    return ('success',{
+        
          'identifier': token['name'],
          'name': token['name'],
          'email': token['email']
 
-    }
+    })
 
     
 # The following AUTH_USER_IDENTIFIER* configuration keys are deprecated and
