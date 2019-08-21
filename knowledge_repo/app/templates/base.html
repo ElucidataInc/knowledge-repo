@@ -215,21 +215,34 @@
     <!-- Placeholder for additional ad-hoc scripts. -->
     
  <script type="text/javascript">
-    const cognitodata = {
-      'cognito_api_endpoint':  'https://cognito-idp.ap-southeast-1.amazonaws.com/',
-      'cognito_client_id': '1ia56rrnfk6n5cl0f76n2hccb',
-      'cognito_user_pool': 'us-west-2_0zv2M4hLK',
-      'cognito_user_pool_region': 'us-west-2'
+
+    function get_cognitodata(url) {
+      var xmlhttp = new XMLHttpRequest();
+      xmlhttp.open("GET", url, false);
+      xmlhttp.send(null);
+      return JSON.parse(xmlhttp.responseText);
     }
 
+    var url;
+    if (window.location.hostname.includes('devpolly'))
+      url='https://api.devpolly.elucidata.io/userpool';
+    else if(window.location.hostname.includes('testpolly'))
+      url='https://api.testpolly.elucidata.io/userpool';
+    else
+      url='https://api.polly.elucidata.io/userpool';
+
+    const cognito_data = get_cognitodata(url);
     function refreshSessionOnExpire() {
-      AWS.config.region = cognitodata.cognito_user_pool_region
+      AWS.config.region = cognito_data.cognito_user_pool_region
       // Setting the pool
+
+      var hostname  = window.location.hostname;
+      var domain = '.' + hostname.split('.').slice(1).join('.');
       var poolData = {
-        UserPoolId: cognitodata.cognito_user_pool,
-        ClientId: cognitodata.cognito_client_id,
+        UserPoolId: cognito_data.cognito_user_pool,
+        ClientId: cognito_data.cognito_client_id,
         Storage: new AmazonCognitoIdentity.CookieStorage({
-          domain: window.location.hostname,
+          domain: domain,
           secure: false
         })
       };
@@ -249,7 +262,7 @@
               console.log("Session is invalid");
             } else {
               var idtoken = session.getIdToken().getJwtToken();
-              Cookies.set('public-token', idtoken, { expires: new Date(jwt_decode(idtoken).exp * 1000), path: '' });
+              Cookies.set('public-token', idtoken, { expires: new Date(jwt_decode(idtoken).exp * 1000), path: '/' });
               resolve(true);
             }
           });
