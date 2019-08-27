@@ -86,7 +86,8 @@ $(document).ready(function() {
     $(cluster_button).addClass("btn-active");
     var glyphicon = $(".glyphicon-post-org.glyphicon-th-list")[0] ;
     $(glyphicon).addClass("glyphicon-active");
-
+    window.kr= "{{kr}}";
+    window.repo = "{{repo}}";
     var tag = "{{ tag |default('', true)}}";
     var clusterSelected = '#cluster{{ group_by|title }}';
     var sortSelected = '#sort{{ sort_by|title }}';
