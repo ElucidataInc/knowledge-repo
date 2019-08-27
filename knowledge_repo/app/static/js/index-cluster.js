@@ -66,7 +66,7 @@ var indexClusterJx = (function(){
     var filter_var = $('#searchbar').val();
    
     var loc = window.location.href;
-    if (loc.substr(loc.length-7,loc.length) == "cluster") {
+    if (loc.substr(loc.length-7,loc.length) === "cluster") {
 	    loc += '?group_by=' + cluster + '&sort_by=' + sort;
     }
     else{
