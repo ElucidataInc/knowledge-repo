@@ -174,6 +174,11 @@ def render_table():
             .filter(User.id == user_id)
             .first())
 
+    prev_filters = dict(request.args)
+
+    if 'filters' in prev_filters:
+      del prev_filters['filters']
+
     repo = request.args.get('repo')
     if repo is None:
         return render_template("error.html", error="repo does not exist in url")
@@ -197,6 +202,7 @@ def render_table():
                            feed_params=feed_params,
                            posts=posts,
                            kr = folder,
+                           prev_filters = prev_filters,
                            post_stats=post_stats,
                            top_header=feed_params,
                            repo=repo)
@@ -228,6 +234,11 @@ def render_cluster():
     #return render_template("permission_denied.html")
     folder = None
     folder_flag = None
+
+    prev_filters = dict(request.args)
+
+    if 'filters' in prev_filters:
+      del prev_filters['filters']
 
     repo = request.args.get('repo')
     if repo is None:
@@ -414,6 +425,7 @@ def render_cluster():
                            grouped_data=grouped_data,
                            filters=filters,
                            sort_by=sort_by,
+                           prev_filters = prev_filters,
                            kr = folder_flag,
                            group_by=group_by,
                            tag=request_tag,
