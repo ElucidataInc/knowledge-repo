@@ -54,7 +54,6 @@ application = KnowledgeDeployer.using('flask')(
         port=port,
         workers=workers,
         timeout=timeout).app
-
 # This should be deprecated. Will do after testing
 if __name__=="__main__":
     application.run()

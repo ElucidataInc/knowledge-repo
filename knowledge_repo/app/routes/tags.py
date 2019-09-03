@@ -16,13 +16,15 @@ from sqlalchemy import and_
 import logging
 import math
 from builtins import str
+from urllib.parse import unquote
 
 from .. import permissions
 from ..proxies import db_session
 from ..models import PageView, Post, assoc_post_tag, Subscription, Tag
 from ..proxies import current_user
-from ..utils.requests import from_request_get_feed_params
+from ..utils.requests import from_url_get_feed_params
 from ..utils.emails import send_subscription_email
+from ..utils.posts import get_posts
 
 blueprint = Blueprint('tag', __name__,
                       template_folder='../templates', static_folder='../static')
@@ -44,7 +46,7 @@ def render_batch_tags():
     sort_by = request.args.get('sort_by', '')
     sort_asc = request.args.get('sort_asc', '')
     sort_desc = not sort_asc
-    feed_params = from_request_get_feed_params(request)
+    feed_params = from_url_get_feed_params(request.url)
 
     excluded_tags = current_app.config.get('EXCLUDED_TAGS', [])
     all_tags = db_session.query(Tag).all()
@@ -118,16 +120,20 @@ def delete_tags_from_posts():
 @PageView.logged
 @permissions.post_comment.require()
 def render_tag_pages():
-    feed_params = from_request_get_feed_params(request)
+    feed_params = from_url_get_feed_params(request.url)
     start = feed_params['start']
     num_results = feed_params['results']
     tag = request.args.get('tag', '')
+    repo = request.args.get('repo')
+    if repo is None:
+        return render_template("error.html", error="repo does not exist in url")
+    tag = unquote(tag) # to convert eg %20 to space
 
     if tag[0] == '#':
         tag = tag[1:]
 
     if tag in current_app.config.get('EXCLUDED_TAGS', []):
-        return render_template('error.html')
+        return render_template('error.html', repo=repo)
 
     tag_obj = (db_session.query(Tag)
                .filter(Tag.name == tag)
@@ -141,6 +147,11 @@ def render_tag_pages():
     # get all files with given tag
     tag_posts = tag_obj.posts
     posts = [post for post in tag_posts if post.is_published]
+
+    filtered_posts, _ = get_posts(feed_params)
+
+    final_posts = [post for post in posts if post in filtered_posts]
+    posts = final_posts
 
     feed_params['posts_count'] = len(posts)
     feed_params['page_count'] = int(math.ceil(1.0 * len(posts) / feed_params['results']))
@@ -178,7 +189,8 @@ def render_tag_pages():
                            tag_pocs=max_author,
                            posts=posts,
                            subscribed=subscribed,
-                           post_stats=post_stats)
+                           post_stats=post_stats,
+                           repo=repo)
 
 
 @render_tag_pages.object_extractor

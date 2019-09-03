@@ -64,7 +64,9 @@ var indexClusterJx = (function(){
                            .replace('sort', '')
                            .toLowerCase();
     var filter_var = $('#searchbar').val();
-    var loc = '/ccbd24f370707c33603102adc7b77123/cluster?group_by=' + cluster + '&sort_by=' + sort;
+   
+   var loc = "/ccbd24f370707c33603102adc7b77123/cluster?repo=" + window.repo + "&kr=" + window.kr + "&group_by=" + cluster + "&sort_by=" +  sort;
+    
     if (sort === "alpha") {
       loc += "&sort_asc=1";
     }

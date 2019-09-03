@@ -87,7 +87,6 @@ def get_posts(feed_params):
         }
 
         (join_table, join_on) = joins[sort_by]
-
         query = (db_session.query(Post, order_col)
                  .outerjoin(join_table, Post.id == join_on))
         query = query.group_by(Post.id)
@@ -109,6 +108,28 @@ def get_posts(feed_params):
     # get the right indexes
     feed_params['posts_count'] = len(posts)
     feed_params['page_count'] = int(math.ceil(float(len(posts)) / feed_params['results']))
+
+    if feed_params['kr']:
+      folder = feed_params['kr']
+      kr_posts = (db_session.query(Post)   # Query the posts table by seeing which path starts with the folder name. All Folder names start with <kr-name>/<rest of path>
+          .filter(func.lower(Post.path).like(folder + '/%')))
+      kr_posts = kr_posts.all()
+      filtered_posts = []
+      for post in posts:
+        if post in kr_posts:
+          filtered_posts.append(post)
+      posts = filtered_posts
+
+    filtered_posts = []
+    for post in posts:
+        split_post = post.path.split('/')
+        kr = split_post[0] + '/' + split_post[1]
+        if current_app.is_kr_shared(kr):
+            filtered_posts.append(post)
+
+    posts = filtered_posts
+
+    # for pagination
     posts = posts[feed_params['start']:feed_params[
         'start'] + feed_params['results']]
 

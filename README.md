@@ -25,3 +25,5 @@ For more information about the motivation and inspiration behind this project, w
 ![Main Feed](https://user-images.githubusercontent.com/124910/37555895-d6ad133a-2a42-11e8-9bb5-1b7ee8d60ef9.png)
 
 ![Example Post](https://user-images.githubusercontent.com/124910/37555894-d662eb5c-2a42-11e8-9547-78bef7835521.png)
+
+This version being maintained by Elucidata

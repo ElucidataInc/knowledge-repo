@@ -1,4 +1,19 @@
 $(document).ready(function() {
+    function getUrl(search_path, searchbar_val){
+      search_path = search_path.slice(1);
+      search_path_split = search_path.split('&');
+      url = '/feed?filters=' + $('#searchbar').val();
+      for(var i = 0;i < search_path_split.length;i ++)
+      {
+        query = search_path_split[i];
+        if (query.slice(0,7) == 'filters')
+          continue
+        url = url + '&';
+        url = url + query;
+      }
+      return url;
+    }
+
     $("#searchbar")[0].setSelectionRange(1000, 1000);
 
     $('#searchbar').typeahead({
@@ -22,7 +37,7 @@ $(document).ready(function() {
             }
         },
         source: function(q, sync, async) {
-            $.ajax('/ajax/index/typeahead?search=' + q, {
+            $.ajax('/ccbd24f370707c33603102adc7b77123/ajax/index/typeahead?search=' + q, {
                 success: function(data, status) {
                     async(JSON.parse(data));
                 }
@@ -32,16 +47,25 @@ $(document).ready(function() {
 
 
     $('#searchbar').bind('typeahead:select', function(obj, datum, name) {
-        window.location = '/post/' + encodeURIComponent(datum.path);
+        var search_args = window.location.search.split('&')
+        var repo_val = ""
+        for(var i=0;i<search_args.length;i++)
+        {
+            search_arg = search_args[i]
+            if(search_arg[0]=='?')
+                search_arg = search_arg.slice(1)
+            if(search_arg.startsWith('repo'))
+                repo_val = search_arg
+        }
+        window.location = '/ccbd24f370707c33603102adc7b77123/post/' + datum.path + '?' + repo_val;
     });
 
     $('#searchbar').keypress(function(event) {
-        var keycode = (event.keyCode ? event.keyCode : event.which);
-        if (keycode == '13') {
-            var path = document.location.pathname;
-            window.location = '/feed?filters=' + $('#searchbar').val()
+      var keycode = (event.keyCode ? event.keyCode : event.which);
+      if (keycode == '13') {
+          window.location = getUrl(document.location.pathname, $('#searchbar').val());
         }
-    });
+  });
 
     var padding = $('.tt-menu').outerWidth()
     $('.tt-menu').width($('#searchbar').width() + padding + "px")

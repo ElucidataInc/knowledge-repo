@@ -371,8 +371,8 @@ class KnowledgePost(object):
                         headers[header] = HEADERS_ALL[header].input.get_input()
         elif missing_required_headers:
             raise RuntimeError(
-                "Knowledge post is missing required headers {}. Please rerun this "
-                "operation in interactive mode, or add headers manually to the "
+                "Knowledge post is missing required headers {}. Please "
+                "add headers to the "
                 "post source file.".format(missing_required_headers)
             )
 

@@ -37,7 +37,7 @@
     <div class='row row-space-4 panel feed-post'>
       <div class='panel-header panel-light'>
         <div class = "col-md-10">
-          <a href="{{url_for('posts.render,path=post.path') }}">
+          <a href = {{url_for('posts.render', path = post.path)}}?repo={{repo}}>
             {{ post.title |title }}
           </a>
         </div>
@@ -56,7 +56,7 @@
               {% for tag_obj in post.tags %}
                 {% set tag = tag_obj.name %}
                 {% set tag_flat = tag.replace("/", "__") %}
-                <a  href="{{'tag.render_tag_pages'}}?tag={{ tag|urlencode }}"
+                <a href="{{url_for('tag.render_tag_pages')}}?tag={{ tag|urlencode }}&repo={{repo}}"
                     data-tag-name="{{ tag_flat }}"
                     data-container="body"
                     data-toggle="popover"
@@ -89,11 +89,11 @@
             <i>{{ post['tldr']|safe }}</i>
             <br>
             <br>
-            <a href="{{url_for('posts.render',path=post.path) }}">Read post</a>
+            <a href="{{url_for('posts.render', path=post.path)}}?repo={{repo}}">Read post</a>
           </p>
         </div>
         <div class="col-md-6">
-          <center><img src="{{ post['thumbnail'] if post['thumbnail'] else '/static/images/default_thumbnail.png' }}" style="max-width:100%;max-height:225px" /></center>
+          <center><img src="{{ post['thumbnail'] if post['thumbnail'] else 'static/images/default_thumbnail.png' }}" style="max-width:100%;max-height:225px" /></center>
         </div>
       </div>
     </div>
