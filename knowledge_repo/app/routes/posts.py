@@ -27,8 +27,6 @@ def render(path):
     mode = request.args.get('render', 'html')
     username, user_id = current_user.identifier, current_user.id
     repo = request.args.get('repo')
-    if repo is None:
-        return render_template("error.html", error="repo does not exist in url")
 
     tmpl = 'markdown-rendered.html'
     if mode == 'raw':
@@ -94,6 +92,9 @@ def render(path):
     
     postpath = path.split('/')
 
+    if repo is None:
+        repo = '/'.join(postpath[:2])
+    
     krpath = url_for('index.render_feed',kr='/'.join(postpath[:2])) + "&repo="+repo
     krname = postpath[1]
     rendered = render_template(tmpl,
