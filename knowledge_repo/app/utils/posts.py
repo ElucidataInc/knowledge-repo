@@ -106,8 +106,6 @@ def get_posts(feed_params):
         posts = [post[0] for post in posts]
 
     # get the right indexes
-    feed_params['posts_count'] = len(posts)
-    feed_params['page_count'] = int(math.ceil(float(len(posts)) / feed_params['results']))
 
     if feed_params['kr']:
       folder = feed_params['kr']
@@ -129,6 +127,8 @@ def get_posts(feed_params):
 
     posts = filtered_posts
 
+    feed_params['posts_count'] = len(posts)
+    feed_params['page_count'] = int(math.ceil(float(len(posts)) / feed_params['results']))
     # for pagination
     posts = posts[feed_params['start']:feed_params[
         'start'] + feed_params['results']]
