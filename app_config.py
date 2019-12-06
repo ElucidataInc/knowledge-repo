@@ -72,8 +72,8 @@ AUTH_PROVIDERS = []
 # and private tokens. This can be done by instantiating instances of
 # `OAuth2Provider` and adding them to the above list, or by specifying OAuth
 # connection properties as demonstrated below for the GitHub authenticator.
-OAUTH_GITHUB_CLIENT_ID = 'cca9f72b123039d23992'
-OAUTH_GITHUB_CLIENT_SECRET = '01750927087e549d1eebe1a3894f43ccd849b9ca'
+#OAUTH_GITHUB_CLIENT_ID = 'cca9f72b123039d23992'
+#OAUTH_GITHUB_CLIENT_SECRET = '01750927087e549d1eebe1a3894f43ccd849b9ca'
 
 # To configure a generic OAuth provider that is not one of the presets
 # provided, you may use the provider 'oauth2' which creates an empty,

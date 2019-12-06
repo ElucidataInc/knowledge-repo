@@ -301,8 +301,7 @@ class KnowledgeFlask(Flask):
 
     def get_project_list(self):
         host=os.environ['POLLY_API_URL']
-        header = {'public-token' : request.cookies.get('public-token')}
-        resp = requests.get("{host}/project".format(host=host),headers=header)
+        resp = requests.get("{host}/project".format(host=host),cookies = request.cookies)
         pr_list = []
         for item in resp.json():
             pid = item['id']
@@ -312,8 +311,7 @@ class KnowledgeFlask(Flask):
 
     def get_kr_of_project(self, pid, pname):
         host=os.environ['POLLY_API_URL']
-        header = {'public-token' : request.cookies.get('public-token')}
-        kr_proj = requests.get("{host}/project?id={pid}".format(host=host,pid=pid),headers = header)
+        kr_proj = requests.get("{host}/project?id={pid}".format(host=host,pid=pid),cookies = request.cookies)
         krs = [(pid, pname, kr) for kr in kr_proj.json()['Knowledge_repo']]
         return krs
     
@@ -327,8 +325,7 @@ class KnowledgeFlask(Flask):
     def is_kr_shared(self,kr): 
         host=os.environ['POLLY_API_URL']
         pid, repo = kr.split('/')
-        header = {'public-token' : request.cookies.get('public-token')}
-        resp = requests.get("%s/project?id=%s"%(host,pid),headers=header)
+        resp = requests.get("%s/project?id=%s"%(host,pid),cookies=request.cookies)
         try:
             resp_obj = resp.json()
         except json.decoder.JSONDecodeError:
